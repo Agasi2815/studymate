@@ -1,0 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", sans-serif;
+  --color-accent: #c8f135;
+  --color-accent-foreground: #000000;
+}
+
+@layer base {
+  :root {
+    --background: 210 20% 94%;
+    --foreground: 0 0% 10%;
+    --accent: 0 0% 0%;
+    --accent-foreground: 0 0% 100%;
+    --glass-bg: 0 0% 0%;
+    --glass-border: 0 0% 0%;
+    --muted: 210 10% 40%;
+    --border: 0 0% 0%;
+  }
+
+  .yin {
+    color-scheme: dark;
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --accent: 0 0% 100%;
+    --accent-foreground: 0 0% 0%;
+    --glass-bg: 0 0% 100%;
+    --glass-border: 0 0% 100%;
+    --muted: 0 0% 60%;
+    --border: 0 0% 100%;
+  }
+
+  .yang {
+    color-scheme: light;
+    --background: 210 20% 94%;
+    --foreground: 0 0% 10%;
+    --accent: 0 0% 0%;
+    --accent-foreground: 0 0% 100%;
+    --glass-bg: 0 0% 0%;
+    --glass-border: 0 0% 0%;
+    --muted: 210 10% 40%;
+    --border: 0 0% 0%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased transition-colors duration-700;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", sans-serif;
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-[#1a1a1a];
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-[#333] rounded-full hover:bg-[#444] transition-colors;
+}
+
+.glass {
+  background-color: hsl(var(--glass-bg) / 0.05);
+  border: 1px solid hsl(var(--glass-border) / 0.1);
+}
+
+.accent-border {
+  @apply border-accent;
+}
+
+.accent-text {
+  @apply text-accent;
+}
+
+.accent-bg {
+  @apply bg-accent text-accent-foreground;
+}
+
+.markdown-body {
+  @apply text-muted leading-relaxed;
+}
+
+.markdown-body h1 {
+  @apply text-2xl font-display font-bold text-foreground mt-6 mb-4 border-b border-foreground/10 pb-2;
+}
+
+.markdown-body h2 {
+  @apply text-xl font-display font-bold text-foreground mt-5 mb-3 flex items-center gap-2;
+}
+
+.markdown-body h2::before {
+  content: "";
+  @apply w-1 h-6 bg-accent rounded-full inline-block;
+}
+
+.markdown-body h3 {
+  @apply text-lg font-bold text-accent mt-4 mb-2;
+}
+
+.markdown-body p {
+  @apply mb-4;
+}
+
+.markdown-body ul, .markdown-body ol {
+  @apply ml-4 space-y-2 mb-4;
+}
+
+.markdown-body li {
+  @apply relative pl-2;
+}
+
+.markdown-body ul li::before {
+  content: "•";
+  @apply absolute -left-4 text-accent font-bold;
+}
+
+.markdown-body code {
+  @apply bg-foreground/5 px-1.5 py-0.5 rounded font-mono text-accent text-sm;
+}
+
+.markdown-body pre {
+  @apply bg-foreground/5 border border-foreground/10 rounded-xl p-4 overflow-x-auto my-4;
+}
+
+.markdown-body blockquote {
+  @apply border-l-4 border-accent bg-accent/5 px-4 py-2 italic rounded-r-lg my-4 text-muted;
+}
+
+.markdown-body strong {
+  @apply text-foreground font-bold;
+}
+
+.markdown-body hr {
+  @apply border-foreground/10 my-8;
+}
+
+.markdown-body a {
+  @apply text-accent hover:underline decoration-accent/30 underline-offset-4;
+}

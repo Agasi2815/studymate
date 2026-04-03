@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user preferences and basic info",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "theme": { "type": "string", "enum": ["yin", "yang"] },
+        "customRules": { "type": "string" },
+        "userStats": {
+          "type": "object",
+          "properties": {
+            "xp": { "type": "number" },
+            "level": { "type": "number" },
+            "badges": { "type": "array", "items": { "type": "string" } },
+            "streak": { "type": "number" },
+            "lastStudyDate": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "theme"]
+    },
+    "StudyPlan": {
+      "title": "Study Plan",
+      "description": "Stores the generated study plan for a user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "subject": { "type": "string" },
+        "examDate": { "type": "string" },
+        "dailyHours": { "type": "number" },
+        "difficulty": { "type": "string" },
+        "topics": { "type": "array", "items": { "type": "string" } },
+        "days": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "subject", "examDate", "days"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A single message in a chat history",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["role", "content", "timestamp"]
+    },
+    "PanicPlan": {
+      "title": "Panic Plan",
+      "description": "A last-minute study plan",
+      "type": "object",
+      "properties": {
+        "subject": { "type": "string" },
+        "panicTopics": { "type": "array" },
+        "examDayAdvice": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subject", "panicTopics", "examDayAdvice"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile and settings"
+    },
+    "/users/{userId}/plans/{planId}": {
+      "schema": "StudyPlan",
+      "description": "User study plans"
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "User chat history"
+    },
+    "/users/{userId}/panicPlans/{panicPlanId}": {
+      "schema": "PanicPlan",
+      "description": "User panic plans"
+    }
+  }
+}
