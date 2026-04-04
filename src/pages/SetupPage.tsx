@@ -36,12 +36,31 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const newFiles: UploadedFile[] = files.map(file => ({
-      file,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
-      type: file.type.startsWith('image/') ? 'image' : file.type === 'application/pdf' ? 'pdf' : 'other'
-    }));
-    setUploadedFiles(prev => [...prev, ...newFiles]);
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB per file
+    const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB total
+
+    const currentTotalSize = uploadedFiles.reduce((acc, f) => acc + f.file.size, 0);
+    let newTotalSize = currentTotalSize;
+
+    const validFiles: UploadedFile[] = [];
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`File ${file.name} is too large. Max 50MB per file.`);
+        continue;
+      }
+      if (newTotalSize + file.size > MAX_TOTAL_SIZE) {
+        setError(`Total upload size exceeded. Max 100MB total.`);
+        break;
+      }
+      newTotalSize += file.size;
+      validFiles.push({
+        file,
+        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
+        type: file.type.startsWith('image/') ? 'image' : file.type === 'application/pdf' ? 'pdf' : 'other'
+      });
+    }
+
+    setUploadedFiles(prev => [...prev, ...validFiles]);
   };
 
   const removeFile = (index: number) => {
@@ -105,7 +124,19 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
       setStudyPlan(plan);
       navigate('/timetable');
     } catch (err: any) {
-      setError(err.message || "Failed to generate study plan. Please try again.");
+      let displayError = err.message || "Failed to generate study plan. Please try again.";
+      
+      // Handle Firestore JSON error format
+      try {
+        const parsed = JSON.parse(err.message);
+        if (parsed.error) {
+          displayError = `System Error: ${parsed.error}. This might be due to security rules or connectivity.`;
+        }
+      } catch (e) {
+        // Not a JSON error, use original message
+      }
+      
+      setError(displayError);
     } finally {
       setLoading(false);
     }
@@ -134,8 +165,8 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
         </div>
       )}
 
-      <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-6">
+      <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-6 p-8 rounded-3xl glass">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted flex items-center gap-2">
               <BookOpen className="h-4 w-4" /> Subject Name
@@ -144,7 +175,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
               type="text"
               required
               placeholder="e.g. Advanced Thermodynamics"
-              className="w-full glass bg-background text-foreground rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
+              className="w-full glass bg-transparent text-foreground rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
               value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
             />
@@ -157,7 +188,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
             <input
               type="date"
               required
-              className="w-full glass bg-background text-foreground rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
+              className="w-full glass bg-transparent text-foreground rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
               value={formData.examDate}
               onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
             />
@@ -175,7 +206,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
               min="1"
               max="12"
               step="1"
-              className="w-full accent-accent bg-foreground/10 h-2 rounded-lg appearance-none cursor-pointer"
+              className="w-full accent-accent bg-foreground/10 h-2 rounded-full appearance-none cursor-pointer"
               value={formData.dailyHours}
               onChange={(e) => setFormData({ ...formData, dailyHours: parseInt(e.target.value) })}
             />
@@ -186,19 +217,19 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
               <BarChart3 className="h-4 w-4" /> Difficulty Level
             </label>
             <select
-              className="w-full glass bg-background text-foreground rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
+              className="w-full glass bg-transparent text-foreground rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
               value={formData.difficulty}
               onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
             >
-              <option value="Easy" className="bg-background text-foreground">Easy</option>
-              <option value="Moderate" className="bg-background text-foreground">Moderate</option>
-              <option value="Hard" className="bg-background text-foreground">Hard</option>
-              <option value="Exam Crammer" className="bg-background text-foreground">Exam Crammer</option>
+              <option value="Easy" className="bg-neutral-900 text-foreground">Easy</option>
+              <option value="Moderate" className="bg-neutral-900 text-foreground">Moderate</option>
+              <option value="Hard" className="bg-neutral-900 text-foreground">Hard</option>
+              <option value="Exam Crammer" className="bg-neutral-900 text-foreground">Exam Crammer</option>
             </select>
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 p-8 rounded-3xl glass">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted flex items-center gap-2">
               <FileText className="h-4 w-4" /> Syllabus Files
@@ -206,7 +237,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
             <div className="space-y-4">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="group cursor-pointer border-2 border-dashed border-foreground/10 rounded-xl p-6 flex flex-col items-center justify-center gap-2 hover:border-accent/50 hover:bg-accent/5 transition-all"
+                className="group cursor-pointer border-2 border-dashed border-foreground/10 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 hover:border-accent/50 hover:bg-accent/5 transition-all"
               >
                 <input 
                   type="file" 
@@ -221,7 +252,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium">Click to upload syllabus files</p>
-                  <p className="text-xs text-muted">PDFs or Images (Max 20MB)</p>
+                  <p className="text-xs text-muted">PDFs or Images (Max 50MB)</p>
                 </div>
               </div>
 
@@ -263,7 +294,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
             </label>
             <textarea
               placeholder="One topic per line..."
-              className="w-full glass bg-background text-foreground rounded-lg px-4 py-3 h-24 focus:outline-none focus:ring-1 focus:ring-accent transition-all resize-none"
+              className="w-full glass bg-transparent text-foreground rounded-xl px-4 py-3 h-32 focus:outline-none focus:ring-1 focus:ring-accent transition-all resize-none"
               value={formData.customTopics}
               onChange={(e) => setFormData({ ...formData, customTopics: e.target.value })}
             />

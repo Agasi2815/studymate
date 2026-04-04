@@ -14,6 +14,7 @@ interface PanicPageProps {
 
 export default function PanicPage({ studyPlan, customRules, panicPlan, setPanicPlan }: PanicPageProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(() => studyPlan ? getDaysRemaining(studyPlan.examDate) : { days: 0, hours: 0, minutes: 0 });
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function PanicPage({ studyPlan, customRules, panicPlan, setPanicP
 
   const handleGenerate = async () => {
     setLoading(true);
+    setError(null);
     try {
       const hoursRemaining = countdown.days * 24 + countdown.hours;
       const plan = await generatePanicPlan(
@@ -63,8 +65,9 @@ export default function PanicPage({ studyPlan, customRules, panicPlan, setPanicP
         customRules
       );
       setPanicPlan(plan);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || "Failed to generate panic plan. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -104,6 +107,12 @@ export default function PanicPage({ studyPlan, customRules, panicPlan, setPanicP
       className="space-y-8"
     >
       {/* Warning Banner */}
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex justify-between items-center">
+          <p className="text-sm font-medium">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-foreground">✕</button>
+        </div>
+      )}
       <div className="bg-red-600 text-white rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl shadow-red-600/20">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
@@ -133,11 +142,11 @@ export default function PanicPage({ studyPlan, customRules, panicPlan, setPanicP
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="glass p-6 rounded-2xl border-red-500/10 space-y-4"
+                className="glass p-8 rounded-3xl border-red-500/20 backdrop-blur-2xl bg-red-500/5 space-y-6 shadow-2xl shadow-red-500/5"
               >
                 <div className="flex justify-between items-start">
-                  <h3 className="text-xl font-bold accent-text">{topic.topic}</h3>
-                  <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-1 rounded font-bold uppercase">Critical</span>
+                  <h3 className="text-2xl font-bold accent-text tracking-tight">{topic.topic}</h3>
+                  <span className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold uppercase tracking-widest border border-red-500/30">Critical</span>
                 </div>
                 
                 <div className="space-y-2">

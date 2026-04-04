@@ -9,17 +9,60 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
   ConfirmationResult,
-  updateProfile
+  updateProfile,
+  signInWithRedirect,
+  getRedirectResult,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, getDocs, getDocFromServer } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  getDocFromServer,
+  enableMultiTabIndexedDbPersistence,
+  enableIndexedDbPersistence 
+} from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export { RecaptchaVerifier, signInWithPhoneNumber, updateProfile };
+export { 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber, 
+  updateProfile, 
+  signInWithRedirect, 
+  getRedirectResult,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
+};
 export type { ConfirmationResult };
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Enable offline persistence
+if (typeof window !== 'undefined') {
+  enableMultiTabIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time.
+      // Note: enableMultiTabIndexedDbPersistence should handle this, but we keep the catch for safety.
+      console.warn('Firestore persistence failed: Multiple tabs open');
+    } else if (err.code === 'unimplemented') {
+      // The current browser does not support all of the features required to enable persistence
+      console.warn('Firestore persistence failed: Browser not supported');
+    }
+  });
+}
+
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Connection test
 async function testConnection() {

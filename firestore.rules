@@ -121,6 +121,25 @@ service cloud.firestore {
                         request.resource.data.panicTopics is list;
         allow delete: if isOwner(userId) || isAdmin();
       }
+
+      match /pomodoroSessions/{sessionId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && 
+                        request.resource.data.userId == request.auth.uid &&
+                        request.resource.data.type in ['focus', 'short-break', 'long-break'] &&
+                        request.resource.data.duration is number &&
+                        request.resource.data.completed is bool;
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /analytics/{docId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId) && 
+                                request.resource.data.userId == request.auth.uid &&
+                                request.resource.data.mastery is list &&
+                                request.resource.data.totalFocusTime is number &&
+                                request.resource.data.sessionsCompleted is number;
+      }
     }
   }
 }

@@ -63,6 +63,34 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["subject", "panicTopics", "examDayAdvice"]
+    },
+    "PomodoroSession": {
+      "title": "Pomodoro Session",
+      "description": "A single focus or break session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number" },
+        "type": { "type": "string", "enum": ["focus", "short-break", "long-break"] },
+        "topic": { "type": "string" },
+        "completed": { "type": "boolean" }
+      },
+      "required": ["userId", "startTime", "endTime", "duration", "type", "completed"]
+    },
+    "UserAnalytics": {
+      "title": "User Analytics",
+      "description": "Stores masteries and focus stats",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "mastery": { "type": "array" },
+        "totalFocusTime": { "type": "number" },
+        "sessionsCompleted": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "mastery", "totalFocusTime", "sessionsCompleted", "lastUpdated"]
     }
   },
   "firestore": {
@@ -81,6 +109,14 @@
     "/users/{userId}/panicPlans/{panicPlanId}": {
       "schema": "PanicPlan",
       "description": "User panic plans"
+    },
+    "/users/{userId}/pomodoroSessions/{sessionId}": {
+      "schema": "PomodoroSession",
+      "description": "User pomodoro history"
+    },
+    "/users/{userId}/analytics/data": {
+      "schema": "UserAnalytics",
+      "description": "User aggregated analytics"
     }
   }
 }

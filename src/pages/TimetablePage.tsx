@@ -105,17 +105,17 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
       <h1 className="text-3xl font-bold">{studyPlan.subject}</h1>
       <p className="text-muted">Exam on {new Date(studyPlan.examDate).toLocaleDateString()}</p>
     </div>
-    <div className="glass px-6 py-4 rounded-2xl flex items-center gap-6 border-accent/20">
+    <div className="glass px-8 py-6 rounded-[2.5rem] flex items-center gap-8 border-white/10 backdrop-blur-2xl bg-white/5 shadow-2xl shadow-accent/5">
       <div className="text-center">
-        <div className="text-3xl font-display font-bold accent-text">{countdown.days}</div>
-        <div className="text-[10px] uppercase tracking-widest text-muted">Days</div>
+        <div className="text-4xl font-display font-bold accent-text">{countdown.days}</div>
+        <div className="text-[10px] uppercase tracking-widest text-muted font-bold">Days</div>
       </div>
-      <div className="h-8 w-px bg-foreground/10" />
+      <div className="h-10 w-px bg-white/10" />
       <div className="text-center">
-        <div className="text-3xl font-display font-bold accent-text">{countdown.hours}</div>
-        <div className="text-[10px] uppercase tracking-widest text-muted">Hours</div>
+        <div className="text-4xl font-display font-bold accent-text">{countdown.hours}</div>
+        <div className="text-[10px] uppercase tracking-widest text-muted font-bold">Hours</div>
       </div>
-      <div className="h-8 w-px bg-foreground/10" />
+      <div className="h-10 w-px bg-white/10" />
           <div className="flex flex-col items-center">
             <AlertCircle className="h-5 w-5 text-red-500 mb-1" />
             <span className="text-[10px] uppercase tracking-widest text-red-500 font-bold">Remaining</span>
@@ -137,18 +137,18 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="glass p-4 rounded-xl text-center">
-            <div className="text-muted text-xs uppercase tracking-wider mb-1">Total Topics</div>
-            <div className="text-xl font-bold">{totalSessions}</div>
+        <div className="grid grid-cols-3 gap-6">
+          <div className="glass p-6 rounded-3xl text-center border-white/5 backdrop-blur-xl bg-white/5 shadow-xl">
+            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mb-2">Total Topics</div>
+            <div className="text-2xl font-bold">{totalSessions}</div>
           </div>
-          <div className="glass p-4 rounded-xl text-center border-accent/10">
-            <div className="text-muted text-xs uppercase tracking-wider mb-1">Done</div>
-            <div className="text-xl font-bold accent-text">{completedSessions}</div>
+          <div className="glass p-6 rounded-3xl text-center border-accent/20 backdrop-blur-xl bg-accent/5 shadow-xl">
+            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mb-2">Done</div>
+            <div className="text-2xl font-bold accent-text">{completedSessions}</div>
           </div>
-          <div className="glass p-4 rounded-xl text-center">
-            <div className="text-muted text-xs uppercase tracking-wider mb-1">Remaining</div>
-            <div className="text-xl font-bold">{totalSessions - completedSessions}</div>
+          <div className="glass p-6 rounded-3xl text-center border-white/5 backdrop-blur-xl bg-white/5 shadow-xl">
+            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mb-2">Remaining</div>
+            <div className="text-2xl font-bold">{totalSessions - completedSessions}</div>
           </div>
         </div>
       </div>

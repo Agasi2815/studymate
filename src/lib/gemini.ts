@@ -1,93 +1,274 @@
-// 1. Install 'openai' if you haven't: npm install openai
-import { OpenAI } from "openai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { StudyPlan, PanicPlan, FilePart, Quiz } from "../types";
 
-const apiKey = "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"; // Paste your nvapi- key here
+// Initialize the Gemini API
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// NVIDIA NIM uses the OpenAI-compatible client
-const client = new OpenAI({
-  apiKey: apiKey,
-  baseURL: "https://integrate.api.nvidia.com/v1",
-});
-
-// Helper for NVIDIA JSON calls
-const generateNVIDIAJson = async (systemInstruction: string, prompt: string, model: string = "nvidia/nemotron-3-super-120b-a12b") => {
-  const response = await client.chat.completions.create({
-    model: model,
-    messages: [
-      { role: "system", content: systemInstruction },
-      { role: "user", content: prompt }
-    ],
-    response_format: { type: "json_object" }, // Forces valid JSON
-    temperature: 0.2,
-  });
-
-  return JSON.parse(response.choices[0].message.content || "{}");
+/**
+ * Helper to execute a function with retries.
+ */
+const withRetry = async <T>(fn: () => Promise<T>, retries: number = 3, delay: number = 1000): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries > 0 && (error.message?.includes('xhr error') || error.message?.includes('500') || error.message?.includes('deadline exceeded'))) {
+      console.warn(`Retrying after error: ${error.message}. Retries left: ${retries}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return withRetry(fn, retries - 1, delay * 2);
+    }
+    throw error;
+  }
 };
 
-export const generateQuiz = async (
-  subject: string,
-  topics: string[],
-  customRules: string = ""
-): Promise<Quiz> => {
-  const systemInstruction = `You are an expert quiz creator. Respond ONLY with valid JSON. ${customRules}`;
-  const prompt = `Create a 5-question MCQs for ${subject}. Topics: ${topics.join(", ")}. 
-                  Use this JSON structure: { "title": "string", "questions": [{ "question": "string", "options": [], "correctAnswer": 0, "explanation": "" }] }`;
-
-  return await generateNVIDIAJson(systemInstruction, prompt) as Quiz;
-};
-
+/**
+ * Generates a study plan based on user input and optional syllabus files.
+ */
 export const generateStudyPlan = async (
   subject: string,
   examDate: string,
   dailyHours: number,
   difficulty: string,
   customTopics: string,
-  files: FilePart[] = [], // Note: NVIDIA NIM handles file text differently than Google. Pass file content as text in the prompt.
+  files: FilePart[] = [],
   customRules: string = ""
 ): Promise<StudyPlan> => {
   const daysUntil = Math.ceil((new Date(examDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-  const systemInstruction = `You are an expert study planner. Respond ONLY with valid JSON. ${customRules}`;
   
-  const prompt = `Create a study plan for ${subject}. Exam in ${daysUntil} days. ${dailyHours} hrs/day. Difficulty: ${difficulty}. Topics: ${customTopics}.
-                  JSON required: { "topics": [], "days": [{ "dayIndex": 1, "focus": "", "sessions": [{ "topic": "", "duration": 45, "importance": "high", "tip": "" }] }] }`;
+  const prompt = `Create a comprehensive study plan for the subject: ${subject}.
+                  Exam Date: ${examDate} (${daysUntil} days remaining).
+                  Daily Study Commitment: ${dailyHours} hours.
+                  Difficulty Level: ${difficulty}.
+                  Specific Topics to Cover: ${customTopics}.
+                  Additional Rules: ${customRules}
+                  
+                  Please analyze the provided syllabus files (if any) and create a structured roadmap.
+                  Respond ONLY with a valid JSON object following this schema:
+                  {
+                    "topics": ["string"],
+                    "days": [
+                      {
+                        "dayIndex": number,
+                        "focus": "string",
+                        "sessions": [
+                          {
+                            "topic": "string",
+                            "duration": number,
+                            "importance": "high" | "medium" | "low",
+                            "tip": "string"
+                          }
+                        ]
+                      }
+                    ]
+                  }`;
 
-  const result = await generateNVIDIAJson(systemInstruction, prompt);
-  return { ...result, subject, examDate, dailyHours, difficulty } as StudyPlan;
+  return withRetry(async () => {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: {
+          parts: [
+            ...files,
+            { text: prompt }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              topics: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              days: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    dayIndex: { type: Type.INTEGER },
+                    focus: { type: Type.STRING },
+                    sessions: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          topic: { type: Type.STRING },
+                          duration: { type: Type.INTEGER },
+                          importance: { type: Type.STRING, enum: ["high", "medium", "low"] },
+                          tip: { type: Type.STRING }
+                        },
+                        required: ["topic", "duration", "importance", "tip"]
+                      }
+                    }
+                  },
+                  required: ["dayIndex", "focus", "sessions"]
+                }
+              }
+            },
+            required: ["topics", "days"]
+          }
+        }
+      });
+
+      const result = JSON.parse(response.text || "{}");
+      return { ...result, subject, examDate, dailyHours, difficulty } as StudyPlan;
+    } catch (error: any) {
+      console.error("Gemini Study Plan Error:", error);
+      throw error;
+    }
+  });
 };
 
+/**
+ * Generates a high-intensity panic study plan for short timeframes.
+ */
 export const generatePanicPlan = async (
   subject: string,
   hoursRemaining: number,
   topics: string[],
   customRules: string = ""
 ): Promise<PanicPlan> => {
-  const systemInstruction = `You are an expert exam coach. Respond ONLY with valid JSON. ${customRules}`;
-  const prompt = `High-intensity panic study list for ${subject}. ${hoursRemaining} hours left. Topics: ${topics.join(", ")}.
-                  JSON: { "panicTopics": [{ "topic": "", "why": "", "keyPoints": [], "likelyQuestions": [], "memoriseTip": "" }], "examDayAdvice": "" }`;
+  const prompt = `EMERGENCY STUDY MODE: I have an exam in ${subject} in only ${hoursRemaining} hours.
+                  Topics I need to cover: ${topics.join(", ")}.
+                  ${customRules}
+                  
+                  Create a high-intensity "Panic Plan" focusing on the most likely exam questions and key concepts.
+                  Respond ONLY with a valid JSON object following this schema:
+                  {
+                    "panicTopics": [
+                      {
+                        "topic": "string",
+                        "why": "string",
+                        "keyPoints": ["string"],
+                        "likelyQuestions": ["string"],
+                        "memoriseTip": "string"
+                      }
+                    ],
+                    "examDayAdvice": "string"
+                  }`;
 
-  return await generateNVIDIAJson(systemInstruction, prompt) as PanicPlan;
+  return withRetry(async () => {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              panicTopics: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    topic: { type: Type.STRING },
+                    why: { type: Type.STRING },
+                    keyPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    likelyQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    memoriseTip: { type: Type.STRING }
+                  },
+                  required: ["topic", "why", "keyPoints", "likelyQuestions", "memoriseTip"]
+                }
+              },
+              examDayAdvice: { type: Type.STRING }
+            },
+            required: ["panicTopics", "examDayAdvice"]
+          }
+        }
+      });
+
+      return JSON.parse(response.text || "{}") as PanicPlan;
+    } catch (error: any) {
+      console.error("Gemini Panic Plan Error:", error);
+      throw error;
+    }
+  });
 };
 
+/**
+ * Generates a quick quiz for a subject and set of topics.
+ */
+export const generateQuiz = async (
+  subject: string,
+  topics: string[],
+  customRules: string = ""
+): Promise<Quiz> => {
+  const prompt = `Create a challenging 5-question multiple-choice quiz for ${subject}.
+                  Topics: ${topics.join(", ")}.
+                  ${customRules}
+                  
+                  Respond ONLY with a valid JSON object following this schema:
+                  {
+                    "title": "string",
+                    "questions": [
+                      {
+                        "question": "string",
+                        "options": ["string"],
+                        "correctAnswer": number,
+                        "explanation": "string"
+                      }
+                    ]
+                  }`;
+
+  return withRetry(async () => {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              questions: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    question: { type: Type.STRING },
+                    options: { type: Type.ARRAY, items: { type: Type.STRING }, minItems: 4, maxItems: 4 },
+                    correctAnswer: { type: Type.INTEGER, description: "Index of the correct option (0-3)" },
+                    explanation: { type: Type.STRING }
+                  },
+                  required: ["question", "options", "correctAnswer", "explanation"]
+                }
+              }
+            },
+            required: ["title", "questions"]
+          }
+        }
+      });
+
+      return JSON.parse(response.text || "{}") as Quiz;
+    } catch (error: any) {
+      console.error("Gemini Quiz Error:", error);
+      throw error;
+    }
+  });
+};
+
+/**
+ * Handles chat interactions with the AI tutor.
+ */
 export const getChatStream = async (
   message: string,
-  history: { role: 'user' | 'assistant', content: string }[], // Adjusted roles for OpenAI standard
+  history: { role: 'user' | 'model', parts: { text: string }[] }[],
   context: { subject: string, topics: string[] },
   customRules: string = ""
 ) => {
-  const systemMessage = {
-    role: "system",
-    content: `You are StudyMate AI Tutor for ${context.subject}. 
-              Topics: ${context.topics.join(", ")}. 
-              Use markdown, emojis, and energetic tone. ${customRules}`
-  };
-
-  // Convert history and add system message
-  const messages = [systemMessage, ...history, { role: "user", content: message }];
-
-  return await client.chat.completions.create({
-    model: "nvidia/nemotron-3-super-120b-a12b",
-    messages: messages as any,
-    stream: true,
+  const chat = ai.chats.create({
+    model: "gemini-flash-latest",
+    history: history,
+    config: {
+      systemInstruction: `You are StudyYou AI Tutor for ${context.subject}. 
+                          Topics: ${context.topics.join(", ")}. 
+                          Use markdown, emojis, and an energetic, encouraging tone. 
+                          Focus on helping the student understand concepts rather than just giving answers.
+                          ${customRules}`,
+    },
   });
+
+  return await chat.sendMessageStream({ message });
 };

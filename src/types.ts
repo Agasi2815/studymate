@@ -70,3 +70,28 @@ export interface FilePart {
     mimeType: string;
   };
 }
+
+export interface PomodoroSession {
+  id?: string;
+  userId: string;
+  startTime: string;
+  endTime: string;
+  duration: number; // in minutes
+  type: 'focus' | 'short-break' | 'long-break';
+  topic?: string;
+  completed: boolean;
+}
+
+export interface SubjectMastery {
+  topic: string;
+  score: number; // 0-100
+  attempts: number;
+}
+
+export interface UserAnalytics {
+  userId: string;
+  mastery: SubjectMastery[];
+  totalFocusTime: number; // in minutes
+  sessionsCompleted: number;
+  lastUpdated: string;
+}

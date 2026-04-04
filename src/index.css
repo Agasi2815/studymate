@@ -75,8 +75,7 @@
 }
 
 .glass {
-  background-color: hsl(var(--glass-bg) / 0.05);
-  border: 1px solid hsl(var(--glass-border) / 0.1);
+  @apply backdrop-blur-xl bg-foreground/[0.03] border border-foreground/10 shadow-xl;
 }
 
 .accent-border {

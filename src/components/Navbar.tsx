@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, BookOpen, Calendar, Zap, MessageSquare, Settings, LogOut, User } from 'lucide-react';
+import { Menu, X, BookOpen, Calendar, Zap, MessageSquare, Settings, LogOut, User, BarChart3 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
@@ -8,6 +8,7 @@ import { useAuth } from '../App';
 const navItems = [
   { name: 'Setup', path: '/', icon: BookOpen },
   { name: 'Timetable', path: '/timetable', icon: Calendar },
+  { name: 'Analytics', path: '/analytics', icon: BarChart3 },
   { name: 'Panic Mode', path: '/panic', icon: Zap },
   { name: 'AI Tutor', path: '/chat', icon: MessageSquare },
   { name: 'Settings', path: '/settings', icon: Settings },
@@ -21,7 +22,7 @@ export default function Navbar() {
   if (!user) return null;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-foreground/10 bg-background/80 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-foreground/10 bg-background/40 backdrop-blur-xl shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
@@ -29,7 +30,7 @@ export default function Navbar() {
               <div className="h-8 w-8 rounded bg-accent flex items-center justify-center">
                 <BookOpen className="h-5 w-5 text-accent-foreground" />
               </div>
-              <span className="text-xl font-display font-bold tracking-tighter">STUDY<span className="text-accent">MATE</span></span>
+              <span className="text-xl font-display font-bold tracking-tighter">STUDY<span className="text-accent">YOU</span></span>
             </Link>
           </div>
           
@@ -98,9 +99,9 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-b border-foreground/10 bg-background"
+            className="md:hidden border-b border-foreground/10 bg-background/60 backdrop-blur-2xl"
           >
-            <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
+            <div className="space-y-1 px-4 pb-6 pt-4">
               {navItems.map((item) => (
                 <Link
                   key={item.name}

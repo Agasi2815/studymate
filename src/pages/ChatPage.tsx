@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, Loader2, Bot, User, Square, Sparkles, HelpCircle, FileText, Lightbulb, Copy, Check, Brain, Trophy } from 'lucide-react';
+import { Send, Loader2, Bot, User, Square, Sparkles, HelpCircle, FileText, Lightbulb, Copy, Check, Brain, Trophy, AlertTriangle } from 'lucide-react';
 import { StudyPlan, ChatMessage, Quiz, QuizQuestion } from '../types';
 import { getChatStream, generateQuiz } from '../lib/gemini';
 import { cn } from '../lib/utils';
@@ -13,9 +13,10 @@ interface ChatPageProps {
   messages: ChatMessage[];
   addMessage: (msg: ChatMessage) => Promise<void>;
   awardXP: (amount: number) => void;
+  onQuizComplete?: (topic: string, score: number) => void;
 }
 
-export default function ChatPage({ studyPlan, customRules, messages, addMessage, awardXP }: ChatPageProps) {
+export default function ChatPage({ studyPlan, customRules, messages, addMessage, awardXP, onQuizComplete }: ChatPageProps) {
   const location = useLocation();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
   const [quizScore, setQuizScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const promptHandled = useRef(false);
@@ -67,7 +69,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
     setStreaming(true);
 
     const history = localMessages.map(m => ({
-      role: m.role,
+      role: (m.role === 'model' ? 'model' : 'user') as 'user' | 'model',
       parts: [{ text: m.content }]
     }));
 
@@ -115,6 +117,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
   const handleStartQuiz = async () => {
     if (!studyPlan) return;
     setQuizLoading(true);
+    setQuizError(null);
     setActiveTab('quiz');
     try {
       const newQuiz = await generateQuiz(studyPlan.subject, studyPlan.topics, customRules);
@@ -123,8 +126,9 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       setSelectedOption(null);
       setQuizScore(0);
       setQuizFinished(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setQuizError(err.message || "Failed to generate quiz. Please try again.");
     } finally {
       setQuizLoading(false);
     }
@@ -147,6 +151,10 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       setSelectedOption(null);
     } else {
       setQuizFinished(true);
+      const finalScore = Math.round((quizScore / quiz.questions.length) * 100);
+      if (onQuizComplete) {
+        onQuizComplete(studyPlan?.subject || 'General', finalScore);
+      }
       if (quizScore === quiz.questions.length) {
         awardXP(200); // Bonus for perfect score
       }
@@ -218,7 +226,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
           <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
             <Bot className="h-12 w-12 text-accent" />
             <div className="space-y-1">
-              <h3 className="text-xl font-bold">StudyMate AI Tutor</h3>
+              <h3 className="text-xl font-bold">StudyYou AI Tutor</h3>
               <p className="text-sm max-w-xs">Ask me anything about your subject, request a quiz, or get study tips.</p>
             </div>
           </div>
@@ -321,6 +329,22 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 text-accent animate-spin" />
               <p className="text-muted font-medium">Generating your custom quiz...</p>
+            </div>
+          ) : quizError ? (
+            <div className="text-center space-y-6 max-w-md">
+              <div className="h-20 w-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
+                <AlertTriangle className="h-10 w-10 text-red-500" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold">Quiz Generation Failed</h3>
+                <p className="text-muted text-sm">{quizError}</p>
+              </div>
+              <button
+                onClick={handleStartQuiz}
+                className="w-full py-3 bg-accent text-accent-foreground rounded-xl font-bold hover:scale-105 transition-all"
+              >
+                Try Again
+              </button>
             </div>
           ) : quizFinished ? (
             <motion.div 

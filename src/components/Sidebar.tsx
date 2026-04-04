@@ -42,7 +42,7 @@ export default function Sidebar({ studyPlans, activePlanId, setActivePlanId, use
   return (
     <div className={cn("w-full lg:w-80 shrink-0 space-y-6", className)}>
       {/* Plan Selector */}
-      <div className="glass p-4 rounded-3xl border-foreground/10 space-y-3">
+      <div className="glass p-6 rounded-[2.5rem] border-white/5 backdrop-blur-2xl bg-white/5 shadow-2xl space-y-4">
         <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted px-2">Your Study Plans</h4>
         <div className="space-y-1">
           {studyPlans.map((plan) => (
@@ -66,10 +66,17 @@ export default function Sidebar({ studyPlans, activePlanId, setActivePlanId, use
             </button>
           ))}
           <button 
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.href = '/analytics'}
             className="w-full text-left px-4 py-3 rounded-2xl text-xs font-bold text-accent hover:bg-accent/10 transition-all flex items-center gap-3"
           >
             <BarChart3 className="h-4 w-4" />
+            View Analytics
+          </button>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="w-full text-left px-4 py-3 rounded-2xl text-xs font-bold text-accent hover:bg-accent/10 transition-all flex items-center gap-3"
+          >
+            <BookOpen className="h-4 w-4" />
             Create New Plan
           </button>
         </div>
@@ -81,7 +88,7 @@ export default function Sidebar({ studyPlans, activePlanId, setActivePlanId, use
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="glass p-6 rounded-3xl border-accent/20 space-y-4 shadow-xl shadow-accent/5 relative overflow-hidden"
+            className="glass p-8 rounded-[2.5rem] border-accent/20 backdrop-blur-2xl bg-accent/5 space-y-6 shadow-2xl shadow-accent/5 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Trophy className="h-16 w-16 text-accent rotate-12" />
@@ -147,7 +154,7 @@ export default function Sidebar({ studyPlans, activePlanId, setActivePlanId, use
               <motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="glass p-6 rounded-3xl border-foreground/10 space-y-4 shadow-xl shadow-accent/5"
+                className="glass p-8 rounded-[2.5rem] border-white/5 backdrop-blur-2xl bg-white/5 space-y-6 shadow-2xl"
               >
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-2xl bg-accent/20 flex items-center justify-center">

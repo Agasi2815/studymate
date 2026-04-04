@@ -140,7 +140,7 @@ export default function SettingsPage({ customRules, setCustomRules, theme, setTh
           <ExternalLink className="h-4 w-4" /> Cloud Sync
         </div>
         <div className="space-y-3">
-          <p className="text-sm text-muted">StudyMate uses Firebase to securely sync your study plans and progress across all your devices.</p>
+          <p className="text-sm text-muted">StudyYou uses Firebase to securely sync your study plans and progress across all your devices.</p>
         </div>
       </section>
 
