@@ -33,16 +33,15 @@ export const generateStudyPlan = async (
   customRules: string = ""
 ): Promise<StudyPlan> => {
   const daysUntil = Math.ceil((new Date(examDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  const cappedDays = Math.min(daysUntil, 30); // Cap at 30 days for speed and token limits
   
-  const prompt = `Create a comprehensive study plan for the subject: ${subject}.
-                  Exam Date: ${examDate} (${daysUntil} days remaining).
-                  Daily Study Commitment: ${dailyHours} hours.
-                  Difficulty Level: ${difficulty}.
-                  Specific Topics to Cover: ${customTopics}.
-                  Additional Rules: ${customRules}
+  const prompt = `Create a study plan for ${subject}.
+                  Exam in ${daysUntil} days. Daily commitment: ${dailyHours}h. Difficulty: ${difficulty}.
+                  Topics: ${customTopics}.
+                  ${customRules}
                   
-                  Please analyze the provided syllabus files (if any) and create a structured roadmap.
-                  Respond ONLY with a valid JSON object following this schema:
+                  Generate a structured roadmap for up to ${cappedDays} days. 
+                  Respond ONLY with a valid JSON object:
                   {
                     "topics": ["string"],
                     "days": [
@@ -64,7 +63,7 @@ export const generateStudyPlan = async (
   return withRetry(async () => {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: {
           parts: [
             ...files,

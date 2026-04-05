@@ -285,9 +285,10 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
                       <button
                         type="button"
                         onClick={() => removeFile(idx)}
-                        className="absolute top-1 right-1 p-1 bg-background/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all z-10"
+                        title="Remove file"
                       >
-                        <CloseIcon className="h-3 w-3 text-foreground" />
+                        <CloseIcon className="h-3 w-3" />
                       </button>
                     </motion.div>
                   ))}
