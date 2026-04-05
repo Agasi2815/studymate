@@ -114,9 +114,27 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       }
     } catch (err: any) {
       console.error("Chat Error:", err);
+      
+      let displayMessage = "I'm sorry, I hit a snag. Please try sending your message again.";
+      
+      try {
+        // Try to parse if it's a JSON string from the SDK
+        const parsedError = typeof err.message === 'string' ? JSON.parse(err.message) : err;
+        const apiError = parsedError.error || parsedError;
+        
+        if (apiError.code === 503 || apiError.status === 'UNAVAILABLE') {
+          displayMessage = "The AI is currently experiencing high demand. Please wait a moment and try again.";
+        } else if (apiError.message) {
+          displayMessage = `I hit a snag: ${apiError.message}`;
+        }
+      } catch (e) {
+        // Fallback to raw message if parsing fails
+        displayMessage = `I'm sorry, I hit a snag: ${err.message || 'Connection lost'}. Please try again.`;
+      }
+
       const errorMessage: ChatMessage = { 
         role: 'model', 
-        content: `I'm sorry, I hit a snag: ${err.message || 'Connection lost'}. Please try sending your message again.`, 
+        content: displayMessage, 
         timestamp: new Date().toISOString() 
       };
       setLocalMessages(prev => [...prev, errorMessage]);
