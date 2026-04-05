@@ -134,7 +134,7 @@ export default function PomodoroTimer({ onComplete, currentTopic }: PomodoroTime
         <button
           onClick={toggleTimer}
           className={cn(
-            "h-20 w-20 rounded-3xl flex items-center justify-center transition-all shadow-xl hover:scale-105 active:scale-95",
+            "h-20 w-20 rounded-3xl flex items-center justify-center transition-all shadow-xl active:scale-95",
             isActive ? "bg-foreground/10 text-foreground" : cn(MODES[mode].bg.replace('/10', ''), "text-white")
           )}
         >

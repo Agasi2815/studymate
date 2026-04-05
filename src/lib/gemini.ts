@@ -11,11 +11,16 @@ const withRetry = async <T>(fn: () => Promise<T>, retries: number = 3, delay: nu
   try {
     return await fn();
   } catch (error: any) {
-    if (retries > 0 && (error.message?.includes('xhr error') || error.message?.includes('500') || error.message?.includes('deadline exceeded'))) {
+    if (retries > 0 && (error.message?.includes('xhr error') || error.message?.includes('500') || error.message?.includes('deadline exceeded') || error.message?.includes('503'))) {
       console.warn(`Retrying after error: ${error.message}. Retries left: ${retries}`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return withRetry(fn, retries - 1, delay * 2);
     }
+    
+    if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota') || error.message?.toLowerCase().includes('limit reached')) {
+      throw new Error("AI Daily Limit Reached. Please try again in a few hours or use a different Gemini API key in settings.");
+    }
+    
     throw error;
   }
 };

@@ -122,19 +122,25 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
         fileParts,
         customRules
       );
-      setStudyPlan(plan);
+      await setStudyPlan(plan);
       navigate('/timetable');
     } catch (err: any) {
+      console.error("Setup Error:", err);
+      
       let displayError = err.message || "Failed to generate study plan. Please try again.";
       
+      if (displayError.toLowerCase().includes('quota') || displayError.toLowerCase().includes('limit') || displayError.includes('503')) {
+        displayError = "AI Daily Limit Reached. Please try again in a few hours or use a different Gemini API key in settings.";
+      }
+
       // Handle Firestore JSON error format
       try {
         const parsed = JSON.parse(err.message);
         if (parsed.error) {
-          displayError = `System Error: ${parsed.error}. This might be due to security rules or connectivity.`;
+          displayError = `Database Error: ${parsed.error}. Please check your connection or try logging out and back in.`;
         }
       } catch (e) {
-        // Not a JSON error, use original message
+        // Not a JSON error
       }
       
       setError(displayError);
@@ -224,10 +230,10 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
                   type="button"
                   onClick={() => setFormData({ ...formData, difficulty: level })}
                   className={cn(
-                    "px-4 py-3 rounded-xl border text-sm font-bold transition-all duration-300",
+                    "px-4 py-3 rounded-xl border text-sm font-bold transition-all duration-200",
                     formData.difficulty === level 
-                      ? "bg-accent text-accent-foreground border-accent shadow-lg shadow-accent/20 scale-[1.02]" 
-                      : "glass border-white/5 text-muted hover:border-white/20 hover:bg-white/5"
+                      ? "bg-accent text-accent-foreground border-accent shadow-md shadow-accent/10" 
+                      : "glass border-white/5 text-muted hover:border-white/20 hover:bg-white/10"
                   )}
                 >
                   {level}
@@ -245,7 +251,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
             <div className="space-y-4">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="group cursor-pointer border-2 border-dashed border-foreground/10 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 hover:border-accent/50 hover:bg-accent/5 transition-all"
+                className="group cursor-pointer border-2 border-dashed border-foreground/10 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 hover:border-accent/30 hover:bg-accent/5 transition-colors"
               >
                 <input 
                   type="file" 
@@ -272,7 +278,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="relative group h-20 w-20 rounded-lg overflow-hidden glass border-foreground/10"
+                      className="relative group h-20 w-20 rounded-lg overflow-hidden bg-foreground/5 border border-foreground/10"
                     >
                       {file.type === 'image' ? (
                         <img src={file.preview} alt="preview" className="h-full w-full object-cover" />
@@ -314,7 +320,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
           <button
             type="submit"
             disabled={loading}
-            className="w-full accent-bg py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100"
+            className="w-full accent-bg py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {loading ? (
               <>
