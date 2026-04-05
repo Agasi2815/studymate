@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Sparkles, BookOpen, Calendar, Clock, BarChart3, FileText, ListPlus, Upload, X as CloseIcon, File as FileIcon, Image as ImageIcon } from 'lucide-react';
 import { generateStudyPlan } from '../lib/gemini';
 import { StudyPlan, FilePart } from '../types';
+import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { User } from 'firebase/auth';
@@ -212,20 +213,27 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="text-sm font-medium text-muted flex items-center gap-2">
               <BarChart3 className="h-4 w-4" /> Difficulty Level
             </label>
-            <select
-              className="w-full glass bg-transparent text-foreground rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
-              value={formData.difficulty}
-              onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-            >
-              <option value="Easy" className="bg-neutral-900 text-foreground">Easy</option>
-              <option value="Moderate" className="bg-neutral-900 text-foreground">Moderate</option>
-              <option value="Hard" className="bg-neutral-900 text-foreground">Hard</option>
-              <option value="Exam Crammer" className="bg-neutral-900 text-foreground">Exam Crammer</option>
-            </select>
+            <div className="grid grid-cols-2 gap-3">
+              {['Easy', 'Moderate', 'Hard', 'Exam Crammer'].map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, difficulty: level })}
+                  className={cn(
+                    "px-4 py-3 rounded-xl border text-sm font-bold transition-all duration-300",
+                    formData.difficulty === level 
+                      ? "bg-accent text-accent-foreground border-accent shadow-lg shadow-accent/20 scale-[1.02]" 
+                      : "glass border-white/5 text-muted hover:border-white/20 hover:bg-white/5"
+                  )}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

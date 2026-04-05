@@ -25,11 +25,11 @@ export function SmokeBackgroundLayout({
                     transition={{ duration: 2 }}
                     className="max-w-4xl mx-auto"
                 >
-                    <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-tighter">
+                    <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-tight">
                         {words.map((word, wordIndex) => (
                             <span
                                 key={wordIndex}
-                                className="inline-block mr-4 last:mr-0"
+                                className="inline-block mr-6 last:mr-0"
                             >
                                 {word.split("").map((letter, letterIndex) => (
                                     <motion.span
@@ -45,7 +45,7 @@ export function SmokeBackgroundLayout({
                                             damping: 25,
                                         }}
                                         className="inline-block text-transparent bg-clip-text 
-                                        bg-gradient-to-r from-white to-white/60"
+                                        bg-gradient-to-r from-white to-white/60 px-[0.02em]"
                                     >
                                         {letter}
                                     </motion.span>

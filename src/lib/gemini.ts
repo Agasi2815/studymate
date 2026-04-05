@@ -264,8 +264,9 @@ export const getChatStream = async (
     config: {
       systemInstruction: `You are StudyYou AI Tutor for ${context.subject}. 
                           Topics: ${context.topics.join(", ")}. 
-                          Use markdown, emojis, and an energetic, encouraging tone. 
-                          Focus on helping the student understand concepts rather than just giving answers.
+                          BE EXTREMELY CONCISE. If the user says "Hi", just say "Hi" or something very short. 
+                          Do NOT elaborate unless asked. Do NOT start by summarizing the study topics unless the user explicitly asks for a summary or a plan.
+                          Use markdown and emojis sparingly. Focus on concept understanding only when prompted.
                           ${customRules}`,
     },
   });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StudyPlan, UserStats } from '../types';
 import { getDaysRemaining } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -14,6 +15,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ studyPlans, activePlanId, setActivePlanId, userStats, className }: SidebarProps) {
+  const navigate = useNavigate();
   const studyPlan = studyPlans.find(p => p.id === activePlanId) || null;
   const [countdown, setCountdown] = useState(() => studyPlan ? getDaysRemaining(studyPlan.examDate) : { days: 0, hours: 0, minutes: 0 });
 
@@ -48,7 +50,12 @@ export default function Sidebar({ studyPlans, activePlanId, setActivePlanId, use
           {studyPlans.map((plan) => (
             <button
               key={plan.id}
-              onClick={() => plan.id && setActivePlanId(plan.id)}
+              onClick={() => {
+                if (plan.id) {
+                  setActivePlanId(plan.id);
+                  navigate('/timetable');
+                }
+              }}
               className={cn(
                 "w-full text-left px-4 py-3 rounded-2xl transition-all flex items-center justify-between group",
                 activePlanId === plan.id 
@@ -88,45 +95,76 @@ export default function Sidebar({ studyPlans, activePlanId, setActivePlanId, use
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="glass p-8 rounded-[2.5rem] border-accent/20 backdrop-blur-2xl bg-accent/5 space-y-6 shadow-2xl shadow-accent/5 relative overflow-hidden"
+            className="glass p-8 rounded-[2.5rem] border-accent/20 backdrop-blur-2xl bg-accent/5 space-y-6 shadow-2xl shadow-accent/5 relative overflow-hidden group"
           >
-            <div className="absolute top-0 right-0 p-4 opacity-10">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:rotate-0 transition-transform duration-700">
               <Trophy className="h-16 w-16 text-accent rotate-12" />
             </div>
             
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-accent text-accent-foreground flex items-center justify-center font-display font-bold text-xl shadow-lg shadow-accent/20">
-                {userStats.level}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-accent text-accent-foreground flex items-center justify-center font-display font-bold text-xl shadow-lg shadow-accent/20">
+                  {userStats.level}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Level {userStats.level}</h3>
+                  <p className="text-xs text-muted uppercase tracking-wider font-bold">Rank: Scholar</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg">Level {userStats.level}</h3>
-                <p className="text-xs text-muted uppercase tracking-wider font-bold">Rank: Scholar</p>
-              </div>
+
+              {userStats.streak > 0 && (
+                <div className="flex flex-col items-center">
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      rotate: [0, 5, -5, 0]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <div className="relative">
+                      <div className="absolute inset-0 blur-md bg-orange-500/50 rounded-full animate-pulse" />
+                      <span className="relative text-2xl">🔥</span>
+                    </div>
+                  </motion.div>
+                  <span className="text-[10px] font-black text-orange-500 uppercase tracking-tighter">{userStats.streak} Day Streak</span>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted">
-                <span>XP: {userStats.xp}</span>
-                <span>Next: {Math.ceil(userStats.xp / 1000) * 1000}</span>
+                <span className="flex items-center gap-1"><Star className="h-3 w-3 text-accent fill-accent" /> {userStats.xp} XP</span>
+                <span>Next: {Math.ceil((userStats.xp + 1) / 1000) * 1000}</span>
               </div>
-              <div className="h-2 w-full bg-foreground/5 rounded-full overflow-hidden">
+              <div className="h-3 w-full bg-foreground/5 rounded-full overflow-hidden p-0.5 border border-white/5">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${xpProgress}%` }}
-                  className="h-full bg-accent"
+                  className="h-full bg-gradient-to-r from-accent to-accent/60 rounded-full shadow-[0_0_15px_rgba(var(--accent-rgb),0.5)]"
                 />
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {userStats.badges.length > 0 ? (
                 userStats.badges.map((badge, i) => (
-                  <div key={i} className="h-6 w-6 rounded-full bg-accent/20 flex items-center justify-center" title={badge}>
-                    <Star className="h-3 w-3 text-accent" />
-                  </div>
+                  <motion.div 
+                    key={i} 
+                    whileHover={{ scale: 1.2, rotate: 5 }}
+                    className="h-8 w-8 rounded-xl bg-accent/20 flex items-center justify-center border border-accent/30 shadow-lg shadow-accent/5" 
+                    title={badge}
+                  >
+                    <Star className="h-4 w-4 text-accent fill-accent" />
+                  </motion.div>
                 ))
               ) : (
-                <p className="text-[10px] text-muted italic">No badges earned yet</p>
+                <div className="w-full p-4 rounded-2xl bg-foreground/5 border border-dashed border-foreground/10 text-center">
+                  <p className="text-[10px] text-muted italic font-medium">Complete tasks to earn badges</p>
+                </div>
               )}
             </div>
           </motion.div>

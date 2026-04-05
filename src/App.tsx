@@ -38,6 +38,7 @@ import {
   Timer, 
   BookOpen, 
   Lightbulb,
+  Trophy,
   X
 } from 'lucide-react';
 
@@ -76,6 +77,7 @@ export default function App() {
   const [pomodoroSessions, setPomodoroSessions] = useState<PomodoroSession[]>([]);
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
   // Auth Listener
   useEffect(() => {
@@ -344,11 +346,17 @@ export default function App() {
     setUserStats(prev => {
       const newXP = prev.xp + amount;
       const newLevel = Math.floor(newXP / 1000) + 1;
+      const leveledUp = newLevel > prev.level;
+      
       const updated = {
         ...prev,
         xp: newXP,
         level: newLevel,
       };
+      
+      if (leveledUp) {
+        setShowLevelUp(true);
+      }
       
       if (user) {
         setDoc(doc(db, 'users', user.uid), { userStats: updated }, { merge: true })
@@ -425,6 +433,56 @@ export default function App() {
       <Router>
         <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
           <Navbar />
+          
+          <AnimatePresence>
+            {showLevelUp && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowLevelUp(false)}
+                  className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+                />
+                <motion.div 
+                  initial={{ scale: 0.5, opacity: 0, y: 100 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.5, opacity: 0, y: 100 }}
+                  className="relative glass p-12 rounded-[3rem] border-accent/30 text-center space-y-8 max-w-sm w-full shadow-2xl shadow-accent/20 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-accent/10 to-transparent pointer-events-none" />
+                  
+                  <motion.div 
+                    animate={{ 
+                      rotate: [0, 10, -10, 0],
+                      scale: [1, 1.2, 1]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="h-24 w-24 bg-accent rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-accent/40"
+                  >
+                    <Trophy className="h-12 w-12 text-accent-foreground" />
+                  </motion.div>
+
+                  <div className="space-y-2">
+                    <h2 className="text-4xl font-black tracking-tighter uppercase italic">Level Up!</h2>
+                    <p className="text-muted font-bold uppercase tracking-widest text-xs">You've reached Level {userStats.level}</p>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-accent/5 border border-accent/20">
+                    <p className="text-sm font-medium leading-relaxed">Your cognitive capacity has expanded. New study techniques unlocked!</p>
+                  </div>
+
+                  <button 
+                    onClick={() => setShowLevelUp(false)}
+                    className="w-full py-4 bg-accent text-accent-foreground rounded-2xl font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-accent/20"
+                  >
+                    Continue Journey
+                  </button>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {globalError && (
               <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex justify-between items-center">
@@ -941,7 +999,7 @@ function LoginPage() {
 
           <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.2em] text-muted font-bold opacity-60">
             <div className="h-px w-8 bg-muted/30" />
-            <span>Secure Infrastructure</span>
+            <span>Powered by Gemini 3.1</span>
             <div className="h-px w-8 bg-muted/30" />
           </div>
         </motion.div>

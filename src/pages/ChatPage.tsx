@@ -31,6 +31,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const streamingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const promptHandled = useRef(false);
 
@@ -61,12 +62,16 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
     if (!text.trim() || streaming) return;
 
     const userMessage: ChatMessage = { role: 'user', content: text, timestamp: new Date().toISOString() };
-    setLocalMessages(prev => [...prev, userMessage]);
+    
+    // Update local messages and history
+    const newMessages = [...localMessages, userMessage];
+    setLocalMessages(newMessages);
     await addMessage(userMessage);
     
     setInput('');
     setLoading(true);
     setStreaming(true);
+    streamingRef.current = true;
 
     const history = localMessages.map(m => ({
       role: (m.role === 'model' ? 'model' : 'user') as 'user' | 'model',
@@ -88,29 +93,43 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       setLocalMessages(prev => [...prev, { role: 'model', content: '', timestamp: new Date().toISOString() }]);
 
       for await (const chunk of stream) {
+        if (!streamingRef.current) break;
+        
         const chunkText = chunk.text || "";
         fullContent += chunkText;
+        
+        // Update state immediately for maximum speed
         setLocalMessages(prev => {
-          const last = prev[prev.length - 1];
-          return [...prev.slice(0, -1), { ...last, content: fullContent }];
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last && last.role === 'model') {
+            last.content = fullContent;
+          }
+          return updated;
         });
       }
       
-      // Save full model response to Firestore
-      await addMessage({ role: 'model', content: fullContent, timestamp: new Date().toISOString() });
-    } catch (err) {
-      console.error(err);
-      const errorMessage: ChatMessage = { role: 'model', content: 'Sorry, I encountered an error. Please try again.', timestamp: new Date().toISOString() };
+      if (streamingRef.current) {
+        await addMessage({ role: 'model', content: fullContent, timestamp: new Date().toISOString() });
+      }
+    } catch (err: any) {
+      console.error("Chat Error:", err);
+      const errorMessage: ChatMessage = { 
+        role: 'model', 
+        content: `I'm sorry, I hit a snag: ${err.message || 'Connection lost'}. Please try sending your message again.`, 
+        timestamp: new Date().toISOString() 
+      };
       setLocalMessages(prev => [...prev, errorMessage]);
-      await addMessage(errorMessage);
     } finally {
       setLoading(false);
       setStreaming(false);
+      streamingRef.current = false;
     }
   };
 
   const stopStreaming = () => {
     setStreaming(false);
+    streamingRef.current = false;
     setLoading(false);
   };
 
@@ -239,34 +258,40 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               className={cn(
-                "flex gap-4 max-w-[85%] group",
+                "flex items-end gap-3 max-w-[85%]",
                 msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
               )}
             >
               <div className={cn(
-                "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mb-1 shadow-sm",
                 msg.role === 'user' ? "bg-accent text-accent-foreground" : "bg-foreground/10 text-accent"
               )}>
                 {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
               </div>
-              <div className="relative">
+              <div className={cn(
+                "relative group flex flex-col",
+                msg.role === 'user' ? "items-end" : "items-start"
+              )}>
                 <div className={cn(
-                  "p-4 rounded-2xl text-sm leading-relaxed",
-                  msg.role === 'user' ? "bg-accent text-accent-foreground font-medium" : "bg-foreground/5 text-foreground border border-foreground/5"
+                  "p-4 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-300",
+                  msg.role === 'user' 
+                    ? "bg-accent text-accent-foreground font-medium rounded-br-none" 
+                    : "bg-foreground/5 text-foreground border border-foreground/5 rounded-bl-none"
                 )}>
-                  <div className="markdown-body prose prose-invert max-w-none">
+                  <div className="markdown-body prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/20 prose-pre:p-2 prose-pre:rounded-lg">
                     <ReactMarkdown
                       components={{
-                        h2: ({node, ...props}) => <h2 className="flex items-center gap-2" {...props} />,
+                        h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2 flex items-center gap-2" {...props} />,
+                        p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
                         li: ({node, ...props}) => <li className="mb-1" {...props} />,
-                        code: ({node, ...props}) => <code className="bg-foreground/10 px-1 rounded text-accent" {...props} />,
+                        code: ({node, ...props}) => <code className="bg-foreground/10 px-1 rounded text-accent font-mono text-xs" {...props} />,
                       }}
                     >
                       {msg.content}
                     </ReactMarkdown>
                   </div>
                   {msg.role === 'model' && msg.content === '' && (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 py-1">
                       <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.3s]" />
                       <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]" />
                       <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" />
@@ -277,7 +302,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
                 {msg.role === 'model' && msg.content !== '' && (
                   <button
                     onClick={() => handleCopy(msg.content, i)}
-                    className="absolute -right-10 top-0 p-2 text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute -right-10 bottom-0 p-2 text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-all"
                     title="Copy to clipboard"
                   >
                     {copiedIndex === i ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}

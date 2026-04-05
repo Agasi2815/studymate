@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, BookOpen, Calendar, Zap, MessageSquare, Settings, LogOut, User, BarChart3 } from 'lucide-react';
+import { Menu, X, BookOpen, Calendar, Zap, MessageSquare, Settings, LogOut, User, BarChart3, Cpu } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
@@ -26,11 +26,16 @@ export default function Navbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded bg-accent flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-accent-foreground" />
+            <Link to="/" className="flex items-center gap-3 group">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-accent/50 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
+                <div className="relative h-10 w-10 rounded-xl bg-background border border-accent/30 flex items-center justify-center shadow-2xl">
+                  <Cpu className="h-6 w-6 text-accent animate-pulse" />
+                </div>
               </div>
-              <span className="text-xl font-display font-bold tracking-tighter">STUDY<span className="text-accent">YOU</span></span>
+              <div className="flex flex-col -space-y-1">
+                <span className="text-xl font-black tracking-tighter uppercase italic">Study<span className="text-accent">You</span></span>
+              </div>
             </Link>
           </div>
           
