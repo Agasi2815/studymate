@@ -228,7 +228,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="h-[calc(100vh-12rem)] flex flex-col gap-4"
+      className="h-[calc(100dvh-14rem)] md:h-[calc(100vh-12rem)] flex flex-col gap-4 overflow-hidden"
     >
       {/* Tabs */}
       <div className="flex gap-4 border-b border-foreground/10">
@@ -258,7 +258,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       {activeTab === 'chat' ? (
         <>
           {/* Quick Actions */}
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar shrink-0">
         {quickActions.map((action) => (
           <button
             key={action.label}
@@ -275,7 +275,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       {/* Chat Area */}
       <div 
         ref={scrollRef}
-        className="flex-grow glass rounded-2xl p-4 overflow-y-auto space-y-6 no-scrollbar"
+        className="flex-grow glass rounded-2xl p-4 overflow-y-auto space-y-6 no-scrollbar min-h-0"
       >
         {localMessages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
@@ -353,7 +353,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       {/* Input Area */}
       <form 
         onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-        className="relative"
+        className="relative flex-shrink-0"
       >
         <input
           type="text"

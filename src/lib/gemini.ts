@@ -44,7 +44,11 @@ export const generateStudyPlan = async (
   const daysUntil = Math.ceil((new Date(examDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
   const cappedDays = Math.min(daysUntil, 30); // Cap at 30 days for speed and token limits
   
-  const prompt = `Create a study plan for ${subject}.
+  const prompt = `You are an Academic Roadmap Expert. Your task is to create a highly structured study plan for the subject: ${subject}.
+                  
+                  CRITICAL INSTRUCTION: This tool is strictly for academic and educational purposes. 
+                  If the provided files or topics are NOT related to a syllabus, academic course, or educational subject (e.g., they are fictional storybooks, entertainment content, or unrelated personal documents), you MUST return an error in the JSON response.
+                  
                   Exam in ${daysUntil} days. Daily commitment: ${dailyHours}h. Difficulty: ${difficulty}.
                   Topics: ${customTopics}.
                   ${customRules}
@@ -52,6 +56,7 @@ export const generateStudyPlan = async (
                   Generate a structured roadmap for up to ${cappedDays} days. 
                   Respond ONLY with a valid JSON object:
                   {
+                    "error": "string (only if content is non-academic)",
                     "topics": ["string"],
                     "days": [
                       {
@@ -84,6 +89,7 @@ export const generateStudyPlan = async (
           responseSchema: {
             type: Type.OBJECT,
             properties: {
+              error: { type: Type.STRING, description: "Error message if the content is non-academic or invalid for a study plan." },
               topics: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING }
@@ -119,6 +125,9 @@ export const generateStudyPlan = async (
       });
 
       const result = JSON.parse(response.text || "{}");
+      if (result.error) {
+        throw new Error(`Academic Content Required: ${result.error}`);
+      }
       return { ...result, subject, examDate, dailyHours, difficulty } as StudyPlan;
     } catch (error: any) {
       console.error("Gemini Study Plan Error:", error);
@@ -272,6 +281,9 @@ export const getChatStream = async (
     config: {
       systemInstruction: `You are StudyYou AI Tutor for ${context.subject}. 
                           Topics: ${context.topics.join(", ")}. 
+                          
+                          CRITICAL: You are an academic tutor. If the user asks about non-academic content (fictional stories, entertainment, unrelated hobbies, etc.), politely decline and steer them back to their study plan for ${context.subject}.
+                          
                           BE EXTREMELY CONCISE. If the user says "Hi", just say "Hi" or something very short. 
                           Do NOT elaborate unless asked. Do NOT start by summarizing the study topics unless the user explicitly asks for a summary or a plan.
                           Use markdown and emojis sparingly. Focus on concept understanding only when prompted.

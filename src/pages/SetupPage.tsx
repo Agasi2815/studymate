@@ -168,6 +168,9 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
         </h1>
         <p className="text-muted max-w-lg mx-auto">
           Ready to conquer your exams? Tell us about your subject, and our AI will build the perfect study roadmap for you.
+          <span className="block mt-2 text-[10px] uppercase tracking-widest font-bold text-accent/60">
+            Academic & Syllabus content only • No fictional storybooks
+          </span>
         </p>
       </div>
 

@@ -74,8 +74,24 @@
   @apply bg-[#333] rounded-full hover:bg-[#444] transition-colors;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .glass {
   @apply backdrop-blur-xl bg-foreground/[0.03] border border-foreground/10 shadow-xl;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .accent-border {
