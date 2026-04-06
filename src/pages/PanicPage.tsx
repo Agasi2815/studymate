@@ -67,7 +67,15 @@ export default function PanicPage({ studyPlan, customRules, panicPlan, setPanicP
       setPanicPlan(plan);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Failed to generate panic plan. Please try again.");
+      let displayError = err.message || "Failed to generate panic plan. Please try again.";
+      
+      if (displayError.includes('AI_LIMIT_REACHED')) {
+        displayError = "AI Daily Limit Reached. The free tier of Gemini has a limit of 20 requests per day. Please try again later or add your own API key in settings.";
+      } else if (displayError.includes('AI_HIGH_DEMAND')) {
+        displayError = "The AI is currently experiencing high demand. Please wait a moment and try again.";
+      }
+      
+      setError(displayError);
     } finally {
       setLoading(false);
     }

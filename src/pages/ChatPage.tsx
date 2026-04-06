@@ -116,20 +116,38 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       console.error("Chat Error:", err);
       
       let displayMessage = "I'm sorry, I hit a snag. Please try sending your message again.";
-      
-      try {
-        // Try to parse if it's a JSON string from the SDK
-        const parsedError = typeof err.message === 'string' ? JSON.parse(err.message) : err;
-        const apiError = parsedError.error || parsedError;
-        
-        if (apiError.code === 503 || apiError.status === 'UNAVAILABLE') {
-          displayMessage = "The AI is currently experiencing high demand. Please wait a moment and try again.";
-        } else if (apiError.message) {
-          displayMessage = `I hit a snag: ${apiError.message}`;
+      const errorStr = err.message || "";
+
+      if (errorStr.includes('AI_LIMIT_REACHED')) {
+        displayMessage = "AI Daily Limit Reached. The free tier of Gemini has a limit of 20 requests per day. Please try again later or add your own API key in settings.";
+      } else if (errorStr.includes('AI_HIGH_DEMAND')) {
+        displayMessage = "The AI is currently experiencing high demand. Please wait a moment and try again.";
+      } else {
+        try {
+          // Try to parse if it's a JSON string from the SDK
+          let apiError = err;
+          if (typeof err.message === 'string') {
+            const firstLevel = JSON.parse(err.message);
+            apiError = firstLevel.error || firstLevel;
+            
+            // Handle nested JSON in message
+            if (typeof apiError.message === 'string' && apiError.message.includes('{')) {
+              const secondLevel = JSON.parse(apiError.message);
+              apiError = secondLevel.error || secondLevel;
+            }
+          }
+          
+          if (apiError.code === 429 || apiError.status === 'RESOURCE_EXHAUSTED' || apiError.message?.includes('quota')) {
+            displayMessage = "AI Daily Limit Reached. The free tier of Gemini has a limit of 20 requests per day. Please try again later or add your own API key in settings.";
+          } else if (apiError.code === 503 || apiError.status === 'UNAVAILABLE') {
+            displayMessage = "The AI is currently experiencing high demand. Please wait a moment and try again.";
+          } else if (apiError.message) {
+            displayMessage = `I hit a snag: ${apiError.message}`;
+          }
+        } catch (e) {
+          // Fallback to raw message if parsing fails
+          displayMessage = `I'm sorry, I hit a snag: ${err.message || 'Connection lost'}. Please try again.`;
         }
-      } catch (e) {
-        // Fallback to raw message if parsing fails
-        displayMessage = `I'm sorry, I hit a snag: ${err.message || 'Connection lost'}. Please try again.`;
       }
 
       const errorMessage: ChatMessage = { 

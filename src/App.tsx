@@ -27,7 +27,7 @@ import {
 } from './lib/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { SmokeBackgroundLayout } from './components/ui/smoke-background-layout';
-import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, getDocFromServer, serverTimestamp, collection } from 'firebase/firestore';
 import { 
   Loader2, 
   Clock, 
@@ -103,7 +103,7 @@ export default function App() {
     const userDocRef = doc(db, 'users', user.uid);
     
     // Initial profile check/create
-    getDoc(userDocRef).then(async (snap) => {
+    getDocFromServer(userDocRef).then(async (snap) => {
       if (!snap.exists()) {
         try {
           await setDoc(userDocRef, {
@@ -125,9 +125,25 @@ export default function App() {
           setUserStats(data.userStats);
         }
       }
-    }).catch((error) => {
+    }).catch((error: any) => {
       console.error("Profile Fetch Error:", error);
-      setGlobalError("Failed to connect to your profile. Please check your internet connection.");
+      let message = "Failed to connect to your profile. Please check your internet connection.";
+      
+      // Try to parse JSON error from handleFirestoreError
+      try {
+        const errInfo = JSON.parse(error.message);
+        message = `Database Error (${errInfo.operationType}): ${errInfo.error}. Please try refreshing or checking your connection.`;
+      } catch (e) {
+        if (error.code === 'permission-denied') {
+          message = "Access denied. Your profile might not be set up correctly. Please try logging out and in again.";
+        } else if (error.code === 'unavailable') {
+          message = "Firestore is currently unavailable. Please check your internet connection or try again later.";
+        } else if (error.message) {
+          message = `Profile Error: ${error.message}`;
+        }
+      }
+      
+      setGlobalError(message);
     }).finally(() => {
       setAuthLoading(false);
     });
@@ -143,7 +159,8 @@ export default function App() {
         setActivePlanId(plans[0].id);
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/plans`);
+      console.error("Plans Sync Error:", error);
+      setGlobalError(`Failed to sync plans: ${error.message}. Please check your connection.`);
     });
 
     // Listen for messages
@@ -153,7 +170,8 @@ export default function App() {
       // Sort by timestamp if needed, but for now just set
       setMessages(msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/messages`);
+      console.error("Messages Sync Error:", error);
+      setGlobalError(`Failed to sync messages: ${error.message}. Please check your connection.`);
     });
 
     // Listen for panic plan
@@ -164,7 +182,8 @@ export default function App() {
         setPanicPlan(plans[plans.length - 1]); // Get the latest one
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/panicPlans`);
+      console.error("Panic Plan Sync Error:", error);
+      setGlobalError(`Failed to sync panic plan: ${error.message}. Please check your connection.`);
     });
 
     // Listen for pomodoro sessions
@@ -173,7 +192,8 @@ export default function App() {
       const sess = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as PomodoroSession));
       setPomodoroSessions(sess.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/pomodoroSessions`);
+      console.error("Sessions Sync Error:", error);
+      setGlobalError(`Failed to sync sessions: ${error.message}. Please check your connection.`);
     });
 
     // Listen for analytics
@@ -183,7 +203,8 @@ export default function App() {
         setAnalytics(snap.data() as UserAnalytics);
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/analytics/data`);
+      console.error("Analytics Sync Error:", error);
+      setGlobalError(`Failed to sync analytics: ${error.message}. Please check your connection.`);
     });
 
     return () => {
@@ -652,6 +673,15 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorLog, setErrorLog] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isIframe, setIsIframe] = useState(false);
+
+  useEffect(() => {
+    try {
+      setIsIframe(window.self !== window.top);
+    } catch (e) {
+      setIsIframe(true);
+    }
+  }, []);
   
   const words = "STUDYYOU".split("");
 
@@ -663,16 +693,19 @@ function LoginPage() {
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error("Google Login Error:", error);
-      if (error.code === 'auth/popup-blocked') {
-        setErrorLog("Popup blocked! Please allow popups for this site or try 'Sign in with Redirect' below.");
-      } else if (error.code === 'auth/cancelled-popup-request') {
+      const errorCode = error.code || "";
+      const errorMessage = error.message || "";
+
+      if (errorCode === 'auth/popup-blocked' || errorMessage.includes('popup-blocked')) {
+        setErrorLog("Popup blocked! Please allow popups for this site or try 'Sign in with Redirect' below. Opening the app in a new tab is the most reliable fix.");
+      } else if (errorCode === 'auth/cancelled-popup-request' || errorMessage.includes('cancelled-popup-request')) {
         setErrorLog("Sign-in was cancelled or another popup was opened.");
-      } else if (error.code === 'auth/unauthorized-domain') {
+      } else if (errorCode === 'auth/unauthorized-domain' || errorMessage.includes('unauthorized-domain')) {
         setErrorLog("Error: This domain is not authorized in Firebase. Please add your App URL to 'Authorized Domains' in the Firebase Console.");
-      } else if (error.code === 'auth/network-request-failed') {
+      } else if (errorCode === 'auth/network-request-failed' || errorMessage.includes('network-request-failed')) {
         setErrorLog("Login failed due to a network error. This often happens in an iframe. Please try opening the app in a new tab to complete the sign-in.");
       } else {
-        setErrorLog(`Google Error: ${error.code || error.message}`);
+        setErrorLog(`Google Login Error: ${errorCode || errorMessage}`);
       }
     } finally {
       setLoading(false);
@@ -800,6 +833,16 @@ function LoginPage() {
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-6"
               >
+                {isIframe && !errorLog && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-2xl bg-accent/5 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest text-center"
+                  >
+                    Running in Preview: If login fails, try opening in a new tab.
+                  </motion.div>
+                )}
+
                 {errorLog && (
                   <motion.div 
                     initial={{ opacity: 0, y: -10 }}

@@ -17,8 +17,12 @@ const withRetry = async <T>(fn: () => Promise<T>, retries: number = 3, delay: nu
       return withRetry(fn, retries - 1, delay * 2);
     }
     
-    if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota') || error.message?.toLowerCase().includes('limit reached')) {
-      throw new Error("AI Daily Limit Reached. Please try again in a few hours or use a different Gemini API key in settings.");
+    if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota') || error.message?.toLowerCase().includes('limit reached') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error("AI_LIMIT_REACHED: The free tier of Gemini has a daily limit. Please try again in a few hours or use a different Gemini API key in settings.");
+    }
+    
+    if (error.message?.includes('503') || error.message?.toLowerCase().includes('overloaded') || error.message?.toLowerCase().includes('high demand')) {
+      throw new Error("AI_HIGH_DEMAND: The AI is currently experiencing high demand. Please wait a moment and try again.");
     }
     
     throw error;
@@ -275,5 +279,7 @@ export const getChatStream = async (
     },
   });
 
-  return await chat.sendMessageStream({ message });
+  return withRetry(async () => {
+    return await chat.sendMessageStream({ message });
+  });
 };

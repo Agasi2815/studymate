@@ -129,15 +129,21 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
       
       let displayError = err.message || "Failed to generate study plan. Please try again.";
       
-      if (displayError.toLowerCase().includes('quota') || displayError.toLowerCase().includes('limit') || displayError.includes('503')) {
+      if (displayError.includes('AI_LIMIT_REACHED')) {
+        displayError = "AI Daily Limit Reached. The free tier of Gemini has a limit of 20 requests per day. Please try again later or add your own API key in settings.";
+      } else if (displayError.includes('AI_HIGH_DEMAND')) {
+        displayError = "The AI is currently experiencing high demand. Please wait a moment and try again.";
+      } else if (displayError.toLowerCase().includes('quota') || displayError.toLowerCase().includes('limit') || displayError.includes('503')) {
         displayError = "AI Daily Limit Reached. Please try again in a few hours or use a different Gemini API key in settings.";
       }
 
       // Handle Firestore JSON error format
       try {
-        const parsed = JSON.parse(err.message);
-        if (parsed.error) {
-          displayError = `Database Error: ${parsed.error}. Please check your connection or try logging out and back in.`;
+        if (typeof err.message === 'string' && err.message.startsWith('{')) {
+          const parsed = JSON.parse(err.message);
+          if (parsed.error) {
+            displayError = `Database Error: ${parsed.error}. Please check your connection or try logging out and back in.`;
+          }
         }
       } catch (e) {
         // Not a JSON error
