@@ -181,8 +181,8 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
         </div>
       )}
 
-      <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-6 p-8 rounded-3xl glass">
+      <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+        <div className="space-y-6 p-6 md:p-8 rounded-2xl md:rounded-3xl glass">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted flex items-center gap-2">
               <BookOpen className="h-4 w-4" /> Subject Name
@@ -252,7 +252,7 @@ export default function SetupPage({ user, setStudyPlan, customRules }: SetupPage
           </div>
         </div>
 
-        <div className="space-y-6 p-8 rounded-3xl glass">
+        <div className="space-y-6 p-6 md:p-8 rounded-2xl md:rounded-3xl glass">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted flex items-center gap-2">
               <FileText className="h-4 w-4" /> Syllabus Files

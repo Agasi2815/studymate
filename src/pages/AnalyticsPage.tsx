@@ -129,28 +129,34 @@ export default function AnalyticsPage({ analytics, sessions }: AnalyticsPageProp
               <AreaChart data={last7Days}>
                 <defs>
                   <linearGradient id="colorMinutes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" strokeOpacity={0.1} />
                 <XAxis 
                   dataKey="date" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 12 }}
+                  tick={{ fill: 'currentColor', fontSize: 12, opacity: 0.5 }}
                   dy={10}
                 />
                 <YAxis hide />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}
-                  itemStyle={{ color: 'var(--accent)' }}
-                  cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }}
+                  contentStyle={{ 
+                    backgroundColor: 'var(--color-background)', 
+                    borderRadius: '12px', 
+                    border: '1px solid hsl(var(--foreground) / 0.1)',
+                    backdropFilter: 'blur(10px)',
+                    color: 'var(--color-foreground)'
+                  }}
+                  itemStyle={{ color: 'var(--color-accent)' }}
+                  cursor={{ stroke: 'var(--color-accent)', strokeOpacity: 0.2, strokeWidth: 2 }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="minutes" 
-                  stroke="var(--accent)" 
+                  stroke="var(--color-accent)" 
                   strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorMinutes)" 
@@ -171,22 +177,28 @@ export default function AnalyticsPage({ analytics, sessions }: AnalyticsPageProp
             {masteryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={masteryData}>
-                  <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                  <PolarGrid stroke="currentColor" strokeOpacity={0.1} />
                   <PolarAngleAxis 
                     dataKey="subject" 
-                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }}
+                    tick={{ fill: 'currentColor', fontSize: 10, opacity: 0.5 }}
                   />
                   <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                   <Radar
                     name="Mastery"
                     dataKey="score"
-                    stroke="var(--accent)"
-                    fill="var(--accent)"
+                    stroke="var(--color-accent)"
+                    fill="var(--color-accent)"
                     fillOpacity={0.6}
                   />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}
-                    itemStyle={{ color: 'var(--accent)' }}
+                    contentStyle={{ 
+                      backgroundColor: 'var(--color-background)', 
+                      borderRadius: '12px', 
+                      border: '1px solid hsl(var(--foreground) / 0.1)',
+                      backdropFilter: 'blur(10px)',
+                      color: 'var(--color-foreground)'
+                    }}
+                    itemStyle={{ color: 'var(--color-accent)' }}
                   />
                 </RadarChart>
               </ResponsiveContainer>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import confetti from 'canvas-confetti';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import SetupPage from './pages/SetupPage';
@@ -8,6 +9,8 @@ import PanicPage from './pages/PanicPage';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import DashboardPage from './pages/DashboardPage';
+import GroupStudyPage from './pages/GroupStudyPage';
 import PomodoroTimer from './components/PomodoroTimer';
 import { StudyPlan, ChatMessage, PanicPlan, UserStats, PomodoroSession, UserAnalytics } from './types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,7 +30,18 @@ import {
 } from './lib/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { SmokeBackgroundLayout } from './components/ui/smoke-background-layout';
-import { doc, onSnapshot, setDoc, getDoc, getDocFromServer, serverTimestamp, collection } from 'firebase/firestore';
+import { 
+  doc, 
+  onSnapshot, 
+  setDoc, 
+  getDoc, 
+  getDocFromServer, 
+  serverTimestamp, 
+  collection, 
+  getDocs, 
+  deleteDoc, 
+  writeBatch 
+} from 'firebase/firestore';
 import { 
   Loader2, 
   Clock, 
@@ -39,7 +53,8 @@ import {
   BookOpen, 
   Lightbulb,
   Trophy,
-  X
+  X,
+  User as UserIcon
 } from 'lucide-react';
 
 // Contexts
@@ -78,6 +93,7 @@ export default function App() {
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
 
   // Auth Listener
   useEffect(() => {
@@ -103,17 +119,19 @@ export default function App() {
     const userDocRef = doc(db, 'users', user.uid);
     
     // Initial profile check/create
-    getDocFromServer(userDocRef).then(async (snap) => {
+    getDoc(userDocRef).then(async (snap) => {
       if (!snap.exists()) {
         try {
           await setDoc(userDocRef, {
             uid: user.uid,
             email: user.email,
-            displayName: user.displayName,
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || '',
             theme: 'yin',
             customRules: '',
             createdAt: serverTimestamp()
           });
+          setShowProfileSetup(true);
         } catch (error) {
           handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}`);
         }
@@ -123,6 +141,9 @@ export default function App() {
         setCustomRules(data.customRules || '');
         if (data.userStats) {
           setUserStats(data.userStats);
+        }
+        if (!data.photoURL && !user.photoURL) {
+          setShowProfileSetup(true);
         }
       }
     }).catch((error: any) => {
@@ -299,12 +320,16 @@ export default function App() {
           lastUpdated: new Date().toISOString()
         };
 
+        try {
         await setDoc(analyticsRef, updatedAnalytics);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/analytics/data`);
       }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/pomodoroSessions`);
     }
-  };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/pomodoroSessions`);
+  }
+};
 
   const handleQuizComplete = async (topic: string, score: number) => {
     if (!user) return;
@@ -338,7 +363,11 @@ export default function App() {
       lastUpdated: new Date().toISOString()
     };
 
-    await setDoc(analyticsRef, updatedAnalytics);
+    try {
+      await setDoc(analyticsRef, updatedAnalytics);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/analytics/data`);
+    }
   };
 
   const updateTheme = async (newTheme: 'yin' | 'yang') => {
@@ -364,12 +393,13 @@ export default function App() {
   };
 
   const awardXP = async (amount: number) => {
+    let updated: UserStats;
     setUserStats(prev => {
       const newXP = prev.xp + amount;
       const newLevel = Math.floor(newXP / 1000) + 1;
       const leveledUp = newLevel > prev.level;
       
-      const updated = {
+      updated = {
         ...prev,
         xp: newXP,
         level: newLevel,
@@ -377,15 +407,33 @@ export default function App() {
       
       if (leveledUp) {
         setShowLevelUp(true);
-      }
-      
-      if (user) {
-        setDoc(doc(db, 'users', user.uid), { userStats: updated }, { merge: true })
-          .catch(error => handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`));
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#c8f135', '#ffffff', '#000000']
+        });
       }
       
       return updated;
     });
+
+    if (user) {
+      try {
+        // We need the updated value here, but state update is async.
+        // Let's calculate it again or use a ref.
+        const newXP = userStats.xp + amount;
+        const newLevel = Math.floor(newXP / 1000) + 1;
+        const toSave = {
+          ...userStats,
+          xp: newXP,
+          level: newLevel,
+        };
+        await setDoc(doc(db, 'users', user.uid), { userStats: toSave }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+      }
+    }
   };
 
   const updateStudyPlan = async (plan: StudyPlan | null) => {
@@ -398,6 +446,19 @@ export default function App() {
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/plans/${activePlanId}`);
+      }
+    }
+  };
+
+  const deleteStudyPlan = async () => {
+    if (user && activePlanId) {
+      try {
+        await deleteDoc(doc(db, 'users', user.uid, 'plans', activePlanId));
+        setActivePlanId(null);
+        setPanicPlan(null);
+        localStorage.removeItem('panicPlan');
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/plans/${activePlanId}`);
       }
     }
   };
@@ -441,6 +502,21 @@ export default function App() {
     }
   };
 
+  const clearChat = async () => {
+    if (!user) return;
+    try {
+      const messagesRef = collection(db, 'users', user.uid, 'messages');
+      const snap = await getDocs(messagesRef);
+      const batch = writeBatch(db);
+      snap.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/messages`);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
@@ -469,7 +545,7 @@ export default function App() {
                   initial={{ scale: 0.5, opacity: 0, y: 100 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.5, opacity: 0, y: 100 }}
-                  className="relative glass p-12 rounded-[3rem] border-accent/30 text-center space-y-8 max-w-sm w-full shadow-2xl shadow-accent/20 overflow-hidden"
+                  className="relative glass p-8 md:p-12 rounded-[2.5rem] md:rounded-[3rem] border-accent/30 text-center space-y-6 md:space-y-8 max-w-sm w-full shadow-2xl shadow-accent/20 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-b from-accent/10 to-transparent pointer-events-none" />
                   
@@ -479,18 +555,18 @@ export default function App() {
                       scale: [1, 1.2, 1]
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="h-24 w-24 bg-accent rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-accent/40"
+                    className="h-20 w-20 md:h-24 md:w-24 bg-accent rounded-2xl md:rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-accent/40"
                   >
-                    <Trophy className="h-12 w-12 text-accent-foreground" />
+                    <Trophy className="h-10 w-10 md:h-12 md:w-12 text-accent-foreground" />
                   </motion.div>
 
                   <div className="space-y-2">
-                    <h2 className="text-4xl font-black tracking-tighter uppercase italic">Level Up!</h2>
-                    <p className="text-muted font-bold uppercase tracking-widest text-xs">You've reached Level {userStats.level}</p>
+                    <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic">Level Up!</h2>
+                    <p className="text-muted font-bold uppercase tracking-widest text-[10px] md:text-xs">You've reached Level {userStats.level}</p>
                   </div>
 
-                  <div className="p-6 rounded-2xl bg-accent/5 border border-accent/20">
-                    <p className="text-sm font-medium leading-relaxed">Your cognitive capacity has expanded. New study techniques unlocked!</p>
+                  <div className="p-4 md:p-6 rounded-xl md:rounded-2xl bg-accent/5 border border-accent/20">
+                    <p className="text-xs md:text-sm font-medium leading-relaxed">Your cognitive capacity has expanded. New study techniques unlocked!</p>
                   </div>
 
                   <button 
@@ -504,14 +580,14 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
             {globalError && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex justify-between items-center">
+              <div className="mb-4 md:mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex justify-between items-center">
                 <p className="text-sm font-medium">{globalError}</p>
                 <button onClick={() => setGlobalError(null)} className="text-red-400 hover:text-foreground">✕</button>
               </div>
             )}
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex flex-col lg:flex-row gap-4 md:gap-8">
               {user && activePlan && (
                 <Sidebar 
                   studyPlans={studyPlans} 
@@ -548,16 +624,39 @@ export default function App() {
                       ) : <LoginPage />
                     } />
                     <Route path="/timetable" element={
-                      user ? <TimetablePage studyPlan={activePlan} setStudyPlan={updateStudyPlan} awardXP={awardXP} /> : <Navigate to="/" />
+                      user ? <TimetablePage studyPlan={activePlan} setStudyPlan={updateStudyPlan} awardXP={awardXP} deleteStudyPlan={deleteStudyPlan} /> : <Navigate to="/" />
                     } />
                     <Route path="/panic" element={
                       user ? <PanicPage studyPlan={activePlan} customRules={customRules} panicPlan={panicPlan} setPanicPlan={savePanicPlan} /> : <Navigate to="/" />
                     } />
                     <Route path="/chat" element={
-                      user ? <ChatPage studyPlan={activePlan} customRules={customRules} messages={messages} addMessage={addMessage} awardXP={awardXP} onQuizComplete={handleQuizComplete} /> : <Navigate to="/" />
+                      user ? (
+                        <ChatPage 
+                          studyPlan={activePlan} 
+                          customRules={customRules} 
+                          messages={messages} 
+                          addMessage={addMessage} 
+                          clearChat={clearChat}
+                          awardXP={awardXP} 
+                          onQuizComplete={handleQuizComplete} 
+                        />
+                      ) : <Navigate to="/" />
                     } />
                     <Route path="/analytics" element={
                       user ? <AnalyticsPage analytics={analytics} sessions={pomodoroSessions} /> : <Navigate to="/" />
+                    } />
+                    <Route path="/group-study" element={
+                      user ? <GroupStudyPage /> : <Navigate to="/" />
+                    } />
+                    <Route path="/dashboard" element={
+                      user ? (
+                        <DashboardPage 
+                          studyPlans={studyPlans} 
+                          activePlanId={activePlanId} 
+                          setActivePlanId={setActivePlanId} 
+                          userStats={userStats} 
+                        />
+                      ) : <Navigate to="/" />
                     } />
                     <Route path="/settings" element={
                       user ? (
@@ -567,6 +666,15 @@ export default function App() {
                           theme={theme}
                           setTheme={updateTheme}
                           clearData={clearData}
+                          user={user}
+                          updateProfile={async (name, photo) => {
+                            try {
+                              await updateProfile(user, { displayName: name, photoURL: photo });
+                              await setDoc(doc(db, 'users', user.uid), { displayName: name, photoURL: photo }, { merge: true });
+                            } catch (error) {
+                              handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+                            }
+                          }}
                         />
                       ) : <Navigate to="/" />
                     } />
@@ -575,6 +683,16 @@ export default function App() {
               </main>
             </div>
           </div>
+          {/* Profile Setup Modal */}
+          <AnimatePresence>
+            {showProfileSetup && user && (
+              <ProfileSetup 
+                user={user} 
+                onComplete={() => setShowProfileSetup(false)} 
+              />
+            )}
+          </AnimatePresence>
+
           <footer className="w-full py-12 text-center text-[10px] uppercase tracking-[0.4em] font-bold text-muted/20 border-t border-foreground/5 mt-auto">
             Agasi Idhaya A 2026 ©
           </footer>
@@ -662,6 +780,105 @@ function BackgroundAnimation() {
           </motion.div>
         );
       })}
+    </div>
+  );
+}
+
+function ProfileSetup({ user, onComplete }: { user: User, onComplete: () => void }) {
+  const [name, setName] = useState(user.displayName || '');
+  const [avatar, setAvatar] = useState(user.photoURL || '');
+  const [loading, setLoading] = useState(false);
+
+  const avatars = [
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Caleb',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Jasper',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Eden',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Willow',
+  ];
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await updateProfile(user, {
+        displayName: name,
+        photoURL: avatar
+      });
+      await setDoc(doc(db, 'users', user.uid), {
+        displayName: name,
+        photoURL: avatar
+      }, { merge: true });
+      onComplete();
+    } catch (error) {
+      console.error("Profile Setup Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="glass p-8 rounded-[2.5rem] max-w-md w-full space-y-8 border-accent/20"
+      >
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Customize Appearance</h2>
+          <p className="text-muted text-sm">How should the study community see you?</p>
+        </div>
+
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-accent/50 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000" />
+            <div className="relative h-24 w-24 rounded-full bg-foreground/5 border-2 border-accent/30 overflow-hidden">
+              {avatar ? (
+                <img src={avatar} alt="Avatar" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <UserIcon className="h-10 w-10 text-muted" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {avatars.map((url) => (
+              <button
+                key={url}
+                onClick={() => setAvatar(url)}
+                className={cn(
+                  "h-12 w-12 rounded-xl overflow-hidden border-2 transition-all hover:scale-110",
+                  avatar === url ? "border-accent scale-110" : "border-transparent opacity-60 hover:opacity-100"
+                )}
+              >
+                <img src={url} alt="Avatar option" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-muted">Display Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your scholar name..."
+              className="w-full glass bg-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
+            />
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={loading || !name}
+            className="w-full py-4 bg-accent text-accent-foreground rounded-2xl font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-accent/20 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : 'Enter StudyYou'}
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }

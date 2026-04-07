@@ -77,7 +77,7 @@ export const generateStudyPlan = async (
   return withRetry(async () => {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: {
           parts: [
             ...files,
@@ -86,6 +86,7 @@ export const generateStudyPlan = async (
         },
         config: {
           responseMimeType: "application/json",
+          maxOutputTokens: 8192,
           responseSchema: {
             type: Type.OBJECT,
             properties: {

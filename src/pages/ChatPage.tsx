@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, Loader2, Bot, User, Square, Sparkles, HelpCircle, FileText, Lightbulb, Copy, Check, Brain, Trophy, AlertTriangle } from 'lucide-react';
+import { Send, Loader2, Bot, User, Square, Sparkles, HelpCircle, FileText, Lightbulb, Copy, Check, Brain, Trophy, AlertTriangle, Trash2 } from 'lucide-react';
 import { StudyPlan, ChatMessage, Quiz, QuizQuestion } from '../types';
 import { getChatStream, generateQuiz } from '../lib/gemini';
 import { cn } from '../lib/utils';
@@ -12,11 +12,12 @@ interface ChatPageProps {
   customRules: string;
   messages: ChatMessage[];
   addMessage: (msg: ChatMessage) => Promise<void>;
+  clearChat: () => Promise<void>;
   awardXP: (amount: number) => void;
   onQuizComplete?: (topic: string, score: number) => void;
 }
 
-export default function ChatPage({ studyPlan, customRules, messages, addMessage, awardXP, onQuizComplete }: ChatPageProps) {
+export default function ChatPage({ studyPlan, customRules, messages, addMessage, clearChat, awardXP, onQuizComplete }: ChatPageProps) {
   const location = useLocation();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,7 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
@@ -228,43 +230,95 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="h-[calc(100dvh-14rem)] md:h-[calc(100vh-12rem)] flex flex-col gap-4 overflow-hidden"
+      className="h-[calc(100dvh-10rem)] md:h-[calc(100vh-12rem)] flex flex-col gap-4 overflow-hidden"
     >
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-foreground/10">
-        <button
-          onClick={() => setActiveTab('chat')}
-          className={cn(
-            "pb-2 text-sm font-bold transition-all relative",
-            activeTab === 'chat' ? "text-accent" : "text-muted hover:text-foreground"
-          )}
-        >
-          AI Tutor
-          {activeTab === 'chat' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />}
-        </button>
-        <button
-          onClick={() => activeTab === 'quiz' ? null : handleStartQuiz()}
-          className={cn(
-            "pb-2 text-sm font-bold transition-all relative flex items-center gap-2",
-            activeTab === 'quiz' ? "text-accent" : "text-muted hover:text-foreground"
-          )}
-        >
-          <Brain className="h-4 w-4" />
-          Quiz Mode
-          {activeTab === 'quiz' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />}
-        </button>
+      <div className="flex items-center justify-between border-b border-foreground/10 shrink-0">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={cn(
+              "pb-2 text-sm font-bold transition-all relative",
+              activeTab === 'chat' ? "text-accent" : "text-muted hover:text-foreground"
+            )}
+          >
+            AI Tutor
+            {activeTab === 'chat' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />}
+          </button>
+          <button
+            onClick={() => activeTab === 'quiz' ? null : handleStartQuiz()}
+            className={cn(
+              "pb-2 text-sm font-bold transition-all relative flex items-center gap-2",
+              activeTab === 'quiz' ? "text-accent" : "text-muted hover:text-foreground"
+            )}
+          >
+            <Brain className="h-4 w-4" />
+            Quiz Mode
+            {activeTab === 'quiz' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />}
+          </button>
+        </div>
+
+        {activeTab === 'chat' && messages.length > 0 && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="pb-2 text-muted hover:text-red-500 transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-wider"
+            title="Clear Chat History"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Clear Chat</span>
+          </button>
+        )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass p-6 rounded-3xl max-w-xs w-full space-y-6 border-red-500/30"
+            >
+              <div className="text-center space-y-2">
+                <div className="h-12 w-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Trash2 className="h-6 w-6 text-red-500" />
+                </div>
+                <h3 className="text-lg font-bold">Clear Chat?</h3>
+                <p className="text-muted text-xs">This will permanently delete all messages in this conversation.</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-foreground/5 text-sm font-bold hover:bg-foreground/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await clearChat();
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 text-sm font-bold hover:bg-red-600 transition-all text-white"
+                >
+                  Clear
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {activeTab === 'chat' ? (
         <>
           {/* Quick Actions */}
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar shrink-0">
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar shrink-0 px-1">
         {quickActions.map((action) => (
           <button
             key={action.label}
             onClick={() => handleSend(action.prompt)}
             disabled={streaming}
-            className="flex items-center gap-2 px-4 py-2 rounded-full glass border-foreground/5 whitespace-nowrap text-xs font-medium hover:bg-foreground/5 transition-all hover:border-accent/30"
+            className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full glass border-foreground/5 whitespace-nowrap text-[10px] md:text-xs font-medium hover:bg-foreground/5 transition-all hover:border-accent/30"
           >
             <action.icon className="h-3 w-3 text-accent" />
             {action.label}
@@ -275,14 +329,14 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
       {/* Chat Area */}
       <div 
         ref={scrollRef}
-        className="flex-grow glass rounded-2xl p-4 overflow-y-auto space-y-6 no-scrollbar min-h-0"
+        className="flex-grow glass rounded-2xl p-3 md:p-4 overflow-y-auto space-y-4 md:space-y-6 no-scrollbar min-h-0"
       >
         {localMessages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-            <Bot className="h-12 w-12 text-accent" />
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 px-4">
+            <Bot className="h-10 w-10 md:h-12 md:w-12 text-accent" />
             <div className="space-y-1">
-              <h3 className="text-xl font-bold">StudyYou AI Tutor</h3>
-              <p className="text-sm max-w-xs">Ask me anything about your subject, request a quiz, or get study tips.</p>
+              <h3 className="text-lg md:text-xl font-bold">StudyYou AI Tutor</h3>
+              <p className="text-xs md:text-sm max-w-xs">Ask me anything about your subject, request a quiz, or get study tips.</p>
             </div>
           </div>
         )}
@@ -294,22 +348,22 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               className={cn(
-                "flex items-end gap-3 max-w-[85%]",
+                "flex items-end gap-2 md:gap-3 max-w-[90%] md:max-w-[85%]",
                 msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
               )}
             >
               <div className={cn(
-                "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mb-1 shadow-sm",
+                "h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center shrink-0 mb-1 shadow-sm",
                 msg.role === 'user' ? "bg-accent text-accent-foreground" : "bg-foreground/10 text-accent"
               )}>
-                {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                {msg.role === 'user' ? <User className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <Bot className="h-3.5 w-3.5 md:h-4 md:w-4" />}
               </div>
               <div className={cn(
                 "relative group flex flex-col",
                 msg.role === 'user' ? "items-end" : "items-start"
               )}>
                 <div className={cn(
-                  "p-4 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-300",
+                  "p-3 md:p-4 rounded-2xl text-xs md:text-sm leading-relaxed shadow-sm transition-all duration-300",
                   msg.role === 'user' 
                     ? "bg-accent text-accent-foreground font-medium rounded-br-none" 
                     : "bg-foreground/5 text-foreground border border-foreground/5 rounded-bl-none"
@@ -317,10 +371,10 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
                   <div className="markdown-body prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/20 prose-pre:p-2 prose-pre:rounded-lg">
                     <ReactMarkdown
                       components={{
-                        h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2 flex items-center gap-2" {...props} />,
+                        h2: ({node, ...props}) => <h2 className="text-base md:text-lg font-bold mb-2 flex items-center gap-2" {...props} />,
                         p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
                         li: ({node, ...props}) => <li className="mb-1" {...props} />,
-                        code: ({node, ...props}) => <code className="bg-foreground/10 px-1 rounded text-accent font-mono text-xs" {...props} />,
+                        code: ({node, ...props}) => <code className="bg-foreground/10 px-1 rounded text-accent font-mono text-[10px] md:text-xs" {...props} />,
                       }}
                     >
                       {msg.content}
@@ -338,10 +392,10 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
                 {msg.role === 'model' && msg.content !== '' && (
                   <button
                     onClick={() => handleCopy(msg.content, i)}
-                    className="absolute -right-10 bottom-0 p-2 text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute -right-8 md:-right-10 bottom-0 p-2 text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-all"
                     title="Copy to clipboard"
                   >
-                    {copiedIndex === i ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    {copiedIndex === i ? <Check className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500" /> : <Copy className="h-3.5 w-3.5 md:h-4 md:w-4" />}
                   </button>
                 )}
               </div>
@@ -361,31 +415,31 @@ export default function ChatPage({ studyPlan, customRules, messages, addMessage,
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask your AI Tutor..."
           disabled={streaming}
-          className="w-full glass rounded-2xl pl-6 pr-14 py-4 focus:outline-none focus:ring-1 focus:ring-accent transition-all"
+          className="w-full glass rounded-2xl pl-4 md:pl-6 pr-12 md:pr-14 py-3 md:py-4 focus:outline-none focus:ring-1 focus:ring-accent transition-all text-sm md:text-base"
         />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
+        <div className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 flex gap-1 md:gap-2">
           {streaming ? (
             <button
               type="button"
               onClick={stopStreaming}
-              className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
+              className="p-1.5 md:p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
             >
-              <Square className="h-5 w-5 fill-current" />
+              <Square className="h-4 w-4 md:h-5 md:w-5 fill-current" />
             </button>
           ) : (
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="p-2 rounded-xl bg-accent text-accent-foreground hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+              className="p-1.5 md:p-2 rounded-xl bg-accent text-accent-foreground hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
             >
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4 md:h-5 md:w-5" />
             </button>
           )}
         </div>
       </form>
         </>
       ) : (
-        <div className="flex-grow glass rounded-2xl p-8 overflow-y-auto no-scrollbar flex flex-col items-center justify-center">
+        <div className="flex-grow glass rounded-2xl p-4 md:p-8 overflow-y-auto no-scrollbar flex flex-col items-center justify-center">
           {quizLoading ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 text-accent animate-spin" />

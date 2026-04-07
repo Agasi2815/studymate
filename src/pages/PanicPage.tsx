@@ -121,23 +121,23 @@ export default function PanicPage({ studyPlan, customRules, panicPlan, setPanicP
           <button onClick={() => setError(null)} className="text-red-400 hover:text-foreground">✕</button>
         </div>
       )}
-      <div className="bg-red-600 text-white rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl shadow-red-600/20">
-        <div className="flex items-center gap-4">
-          <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
-            <AlertTriangle className="h-6 w-6" />
+      <div className="bg-red-600 text-white rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-red-600/20">
+        <div className="flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-6">
+          <div className="h-14 w-14 md:h-16 md:w-16 bg-white/20 rounded-full flex items-center justify-center animate-pulse shrink-0">
+            <AlertTriangle className="h-7 w-7 md:h-8 md:w-8" />
           </div>
           <div>
-            <h2 className="text-2xl font-display font-bold">🔥 Last Night Before Exam</h2>
-            <p className="text-red-100 font-medium">{studyPlan.subject} • {countdown.days}d {countdown.hours}h remaining</p>
+            <h2 className="text-2xl md:text-3xl font-display font-bold tracking-tight">🔥 Last Night Before Exam</h2>
+            <p className="text-red-100 font-medium text-sm md:text-base opacity-90">{studyPlan.subject} • {countdown.days}d {countdown.hours}h remaining</p>
           </div>
         </div>
         <button
           onClick={handleGenerate}
           disabled={loading}
-          className="bg-white text-red-600 px-8 py-3 rounded-xl font-bold hover:bg-red-50 transition-all flex items-center gap-2 disabled:opacity-50"
+          className="w-full md:w-auto bg-white text-red-600 px-10 py-4 rounded-xl font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-lg"
         >
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
-          Generate Panic List
+          {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Zap className="h-6 w-6" />}
+          <span className="uppercase tracking-widest text-sm">Generate Panic List</span>
         </button>
       </div>
 

@@ -95,3 +95,22 @@ export interface UserAnalytics {
   sessionsCompleted: number;
   lastUpdated: string;
 }
+
+export interface GroupSession {
+  id: string;
+  name: string;
+  creatorId: string;
+  creatorName: string;
+  createdAt: any;
+  active: boolean;
+  sharedVideoUrl?: string;
+  sharedNotes?: string;
+  participants: {
+    [uid: string]: {
+      name: string;
+      photoURL?: string;
+      isSharingScreen?: boolean;
+      lastSeen: any;
+    };
+  };
+}

@@ -148,5 +148,31 @@ service cloud.firestore {
                                 request.resource.data.sessionsCompleted is number;
       }
     }
+
+    match /groupSessions/{sessionId} {
+      function isValidSession(data) {
+        return hasRequiredFields(['name', 'creatorId', 'creatorName', 'active', 'participants']) &&
+               data.name is string && data.name.size() < 128 &&
+               data.creatorId is string && data.creatorId.size() < 128 &&
+               data.creatorName is string && data.creatorName.size() < 128 &&
+               data.active is bool &&
+               data.participants is map &&
+               data.participants.size() < 50 &&
+               (!('sharedVideoUrl' in data) || (data.sharedVideoUrl is string && data.sharedVideoUrl.size() < 2048)) &&
+               (!('sharedNotes' in data) || (data.sharedNotes is string && data.sharedNotes.size() < 50000)) &&
+               (!('createdAt' in data) || (data.createdAt is timestamp || data.createdAt is string));
+      }
+
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidSession(request.resource.data) && request.resource.data.creatorId == request.auth.uid;
+      allow update: if isAuthenticated() && isValidSession(request.resource.data) && 
+                      (
+                        // User is the creator
+                        (request.auth.uid == resource.data.creatorId) ||
+                        // User is a participant (joining, updating presence, or leaving)
+                        (request.auth.uid in resource.data.participants || request.auth.uid in request.resource.data.participants)
+                      );
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.creatorId || isAdmin());
+    }
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Trash2, Shield, Info, ExternalLink, AlertCircle, Moon, Sun, Save, Sparkles } from 'lucide-react';
+import { Settings, Trash2, Shield, Info, ExternalLink, AlertCircle, Moon, Sun, Save, Sparkles, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -9,12 +9,25 @@ interface SettingsPageProps {
   theme: 'yin' | 'yang';
   setTheme: (theme: 'yin' | 'yang') => void;
   clearData: () => void;
+  user: any;
+  updateProfile: (name: string, photoURL: string) => Promise<void>;
 }
 
-export default function SettingsPage({ customRules, setCustomRules, theme, setTheme, clearData }: SettingsPageProps) {
+export default function SettingsPage({ customRules, setCustomRules, theme, setTheme, clearData, user, updateProfile }: SettingsPageProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [rules, setRules] = useState(customRules);
   const [isSaving, setIsSaving] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
+
+  const avatars = [
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Caleb',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Jasper',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Eden',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Willow',
+  ];
 
   const handleClear = () => {
     clearData();
@@ -25,6 +38,12 @@ export default function SettingsPage({ customRules, setCustomRules, theme, setTh
   const handleSaveRules = async () => {
     setIsSaving(true);
     await setCustomRules(rules);
+    setTimeout(() => setIsSaving(false), 500);
+  };
+
+  const handleUpdateProfile = async () => {
+    setIsSaving(true);
+    await updateProfile(displayName, photoURL);
     setTimeout(() => setIsSaving(false), 500);
   };
 
@@ -41,6 +60,66 @@ export default function SettingsPage({ customRules, setCustomRules, theme, setTh
         </div>
         <h1 className="text-3xl font-bold">Settings</h1>
       </div>
+
+      {/* Profile Customization */}
+      <section className="glass p-6 rounded-2xl space-y-6">
+        <div className="flex items-center gap-2 text-muted text-sm font-medium uppercase tracking-wider">
+          <User className="h-4 w-4" /> Profile Appearance
+        </div>
+        
+        <div className="flex flex-col sm:flex-row items-center gap-8">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-accent/50 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000" />
+            <div className="relative h-24 w-24 rounded-full bg-foreground/5 border-2 border-accent/30 overflow-hidden">
+              {photoURL ? (
+                <img src={photoURL} alt="Avatar" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <User className="h-10 w-10 text-muted" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-grow space-y-4 w-full">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Display Name</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full glass bg-white/5 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Choose Avatar</label>
+              <div className="flex flex-wrap gap-2">
+                {avatars.map((url) => (
+                  <button
+                    key={url}
+                    onClick={() => setPhotoURL(url)}
+                    className={cn(
+                      "h-10 w-10 rounded-lg overflow-hidden border-2 transition-all",
+                      photoURL === url ? "border-accent scale-110" : "border-transparent opacity-60 hover:opacity-100"
+                    )}
+                  >
+                    <img src={url} alt="Avatar option" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <button
+          onClick={handleUpdateProfile}
+          disabled={isSaving || !displayName}
+          className="flex items-center gap-2 px-6 py-3 bg-accent text-accent-foreground rounded-xl font-bold hover:scale-105 transition-all active:scale-95 disabled:opacity-50"
+        >
+          {isSaving ? <Save className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Update Profile
+        </button>
+      </section>
 
       {/* Appearance */}
       <section className="glass p-6 rounded-2xl space-y-4">

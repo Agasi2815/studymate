@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, BookOpen, Calendar, Zap, MessageSquare, Settings, LogOut, User, BarChart3, Cpu } from 'lucide-react';
+import { Menu, X, BookOpen, Calendar, Zap, MessageSquare, Settings, LogOut, User, BarChart3, Cpu, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../App';
 
 const navItems = [
+  { name: 'Dashboard', path: '/dashboard', icon: BarChart3, mobileOnly: true },
   { name: 'Setup', path: '/', icon: BookOpen },
   { name: 'Timetable', path: '/timetable', icon: Calendar },
   { name: 'Analytics', path: '/analytics', icon: BarChart3 },
+  { name: 'Group Study', path: '/group-study', icon: Users },
   { name: 'Panic Mode', path: '/panic', icon: Zap },
   { name: 'AI Tutor', path: '/chat', icon: MessageSquare },
   { name: 'Settings', path: '/settings', icon: Settings },
@@ -42,7 +44,7 @@ export default function Navbar() {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-4">
             <div className="flex items-baseline space-x-2">
-              {navItems.map((item) => (
+              {navItems.filter(item => !item.mobileOnly).map((item) => (
                 <Link
                   key={item.name}
                   to={item.path}

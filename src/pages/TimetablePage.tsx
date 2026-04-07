@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, Clock, AlertCircle, MessageSquare, HelpCircle, Trophy, Calendar } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, Clock, AlertCircle, MessageSquare, HelpCircle, Trophy, Calendar, Trash2 } from 'lucide-react';
 import { StudyPlan, StudySession } from '../types';
-import { cn, formatDate, getDaysRemaining } from '../lib/utils';
+import { cn, formatDate, getDaysRemaining, triggerConfetti } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface TimetablePageProps {
   studyPlan: StudyPlan | null;
   setStudyPlan: (plan: StudyPlan) => void;
   awardXP: (amount: number) => void;
+  deleteStudyPlan: () => Promise<void>;
 }
 
-export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: TimetablePageProps) {
+export default function TimetablePage({ studyPlan, setStudyPlan, awardXP, deleteStudyPlan }: TimetablePageProps) {
   const navigate = useNavigate();
   const [expandedDay, setExpandedDay] = useState<number>(1);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [countdown, setCountdown] = useState(() => studyPlan ? getDaysRemaining(studyPlan.examDate) : { days: 0, hours: 0, minutes: 0 });
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
       
       if (!wasCompleted && session.completed) {
         awardXP(100);
+        triggerConfetti();
       }
     }
   };
@@ -97,39 +100,48 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-8"
+      className="space-y-6 md:space-y-8"
     >
       {/* Header & Countdown */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-    <div>
-      <h1 className="text-3xl font-bold">{studyPlan.subject}</h1>
-      <p className="text-muted">Exam on {new Date(studyPlan.examDate).toLocaleDateString()}</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+    <div className="flex items-center gap-4">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold">{studyPlan.subject}</h1>
+        <p className="text-sm text-muted">Exam on {new Date(studyPlan.examDate).toLocaleDateString()}</p>
+      </div>
+      <button 
+        onClick={() => setShowDeleteConfirm(true)}
+        className="p-2 text-muted hover:text-red-500 transition-colors"
+        title="Delete Plan"
+      >
+        <Trash2 className="h-5 w-5" />
+      </button>
     </div>
-    <div className="glass px-8 py-6 rounded-[2.5rem] flex items-center gap-8 border-white/10 backdrop-blur-2xl bg-white/5 shadow-2xl shadow-accent/5">
+    <div className="w-full md:w-auto glass px-4 py-4 md:px-8 md:py-6 rounded-2xl md:rounded-[2.5rem] flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-8 border-white/5 backdrop-blur-2xl bg-white/5 shadow-2xl">
       <div className="text-center">
-        <div className="text-4xl font-display font-bold accent-text">{countdown.days}</div>
-        <div className="text-[10px] uppercase tracking-widest text-muted font-bold">Days</div>
+        <div className="text-3xl md:text-4xl font-display font-bold accent-text">{countdown.days}</div>
+        <div className="text-[8px] md:text-[10px] uppercase tracking-widest text-muted font-bold">Days</div>
       </div>
-      <div className="h-10 w-px bg-white/10" />
+      <div className="h-8 md:h-10 w-px bg-white/10" />
       <div className="text-center">
-        <div className="text-4xl font-display font-bold accent-text">{countdown.hours}</div>
-        <div className="text-[10px] uppercase tracking-widest text-muted font-bold">Hours</div>
+        <div className="text-3xl md:text-4xl font-display font-bold accent-text">{countdown.hours}</div>
+        <div className="text-[8px] md:text-[10px] uppercase tracking-widest text-muted font-bold">Hours</div>
       </div>
-      <div className="h-10 w-px bg-white/10" />
-          <div className="flex flex-col items-center">
-            <AlertCircle className="h-5 w-5 text-red-500 mb-1" />
-            <span className="text-[10px] uppercase tracking-widest text-red-500 font-bold">Remaining</span>
-          </div>
-        </div>
+      <div className="h-8 md:h-10 w-px bg-white/10" />
+      <div className="flex flex-col items-center">
+        <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-red-500 mb-1" />
+        <span className="text-[8px] md:text-[10px] uppercase tracking-widest text-red-500 font-bold">Remaining</span>
+      </div>
+    </div>
       </div>
 
       {/* Progress & Stats */}
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4">
         <div className="flex justify-between items-end">
-          <span className="text-sm font-medium text-muted">Overall Progress</span>
-          <span className="text-2xl font-display font-bold accent-text">{progress}%</span>
+          <span className="text-xs md:text-sm font-medium text-muted">Overall Progress</span>
+          <span className="text-xl md:text-2xl font-display font-bold accent-text">{progress}%</span>
         </div>
-        <div className="w-full bg-foreground/10 h-3 rounded-full overflow-hidden border border-foreground/5">
+        <div className="w-full bg-foreground/10 h-2 md:h-3 rounded-full overflow-hidden border border-foreground/5">
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
@@ -137,29 +149,29 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          <div className="glass p-6 rounded-3xl text-center border-white/5 backdrop-blur-xl bg-white/5 shadow-xl">
-            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mb-2">Total Topics</div>
-            <div className="text-2xl font-bold">{totalSessions}</div>
+        <div className="grid grid-cols-3 gap-3 md:gap-6">
+          <div className="glass p-3 md:p-6 rounded-2xl md:rounded-3xl text-center border-white/5 backdrop-blur-xl bg-white/5 shadow-xl">
+            <div className="text-muted text-[8px] md:text-[10px] font-bold uppercase tracking-widest mb-1 md:mb-2">Topics</div>
+            <div className="text-lg md:text-2xl font-bold">{totalSessions}</div>
           </div>
-          <div className="glass p-6 rounded-3xl text-center border-accent/20 backdrop-blur-xl bg-accent/5 shadow-xl">
-            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mb-2">Done</div>
-            <div className="text-2xl font-bold accent-text">{completedSessions}</div>
+          <div className="glass p-3 md:p-6 rounded-2xl md:rounded-3xl text-center border-accent/20 backdrop-blur-xl bg-accent/5 shadow-xl">
+            <div className="text-muted text-[8px] md:text-[10px] font-bold uppercase tracking-widest mb-1 md:mb-2">Done</div>
+            <div className="text-lg md:text-2xl font-bold accent-text">{completedSessions}</div>
           </div>
-          <div className="glass p-6 rounded-3xl text-center border-white/5 backdrop-blur-xl bg-white/5 shadow-xl">
-            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mb-2">Remaining</div>
-            <div className="text-2xl font-bold">{totalSessions - completedSessions}</div>
+          <div className="glass p-3 md:p-6 rounded-2xl md:rounded-3xl text-center border-white/5 backdrop-blur-xl bg-white/5 shadow-xl">
+            <div className="text-muted text-[8px] md:text-[10px] font-bold uppercase tracking-widest mb-1 md:mb-2">Left</div>
+            <div className="text-lg md:text-2xl font-bold">{totalSessions - completedSessions}</div>
           </div>
         </div>
       </div>
 
       {/* Timetable List */}
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Study Roadmap</h2>
+          <h2 className="text-lg md:text-xl font-bold">Study Roadmap</h2>
           <button 
             onClick={() => setExpandedDay(expandedDay === -1 ? 0 : -1)}
-            className="text-xs font-bold uppercase tracking-widest text-accent hover:text-foreground transition-colors"
+            className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-foreground transition-colors"
           >
             {expandedDay === -1 ? 'Collapse All' : 'Expand All'}
           </button>
@@ -174,7 +186,7 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
               key={day.dayIndex}
               layout
               className={cn(
-                "glass rounded-2xl overflow-hidden transition-all",
+                "glass rounded-xl md:rounded-2xl overflow-hidden transition-all",
                 isToday && "ring-2 ring-accent border-accent/20 shadow-lg shadow-accent/5",
                 isDone && "bg-green-500/5 border-green-500/20",
                 isExpanded && "ring-1 ring-foreground/10"
@@ -182,47 +194,47 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
             >
               <button
                 onClick={() => setExpandedDay(isExpanded ? 0 : day.dayIndex)}
-                className="w-full px-6 py-5 flex items-center justify-between hover:bg-foreground/5 transition-colors group"
+                className="w-full px-4 py-4 md:px-6 md:py-5 flex items-center justify-between hover:bg-foreground/5 transition-colors group"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 md:gap-4">
                   <div className={cn(
-                    "h-12 w-12 rounded-2xl flex items-center justify-center font-display font-bold text-lg shadow-sm",
+                    "h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl flex items-center justify-center font-display font-bold text-base md:text-lg shadow-sm",
                     isToday ? "bg-accent text-accent-foreground" : 
                     isDone ? "bg-green-500/20 text-green-500" : "bg-foreground/10 text-muted"
                   )}>
-                    {isDone ? <Trophy className="h-6 w-6" /> : day.dayIndex}
+                    {isDone ? <Trophy className="h-5 w-5 md:h-6 md:w-6" /> : day.dayIndex}
                   </div>
                   <div className="text-left">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg">Day {day.dayIndex}: {day.focus}</h3>
+                      <h3 className="font-bold text-sm md:text-lg">Day {day.dayIndex}: {day.focus}</h3>
                       {isToday && (
-                        <span className="px-2 py-0.5 bg-accent text-accent-foreground text-[10px] font-bold rounded-full uppercase tracking-widest">Today</span>
+                        <span className="px-1.5 py-0.5 bg-accent text-accent-foreground text-[8px] md:text-[10px] font-bold rounded-full uppercase tracking-widest">Today</span>
                       )}
                       {isDone && (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
                       )}
                     </div>
-                    <p className="text-xs text-muted font-medium uppercase tracking-widest">
+                    <p className="text-[10px] text-muted font-medium uppercase tracking-widest">
                       {day.sessions.length} Sessions • {day.sessions.filter(s => s.completed).length} Completed
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="hidden md:flex gap-1">
+                <div className="flex items-center gap-2 md:gap-4">
+                  <div className="hidden sm:flex gap-1">
                     {day.sessions.map((s, i) => (
                       <div 
                         key={i} 
                         className={cn(
-                          "h-1.5 w-4 rounded-full",
+                          "h-1 w-3 md:h-1.5 md:w-4 rounded-full",
                           s.completed ? "bg-green-500" : "bg-foreground/10"
                         )} 
                       />
                     ))}
                   </div>
                   {isExpanded ? (
-                    <ChevronUp className="h-5 w-5 text-accent transition-transform" />
+                    <ChevronUp className="h-4 w-4 md:h-5 md:w-5 text-accent transition-transform" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-muted group-hover:text-foreground transition-transform" />
+                    <ChevronDown className="h-4 w-4 md:h-5 md:w-5 text-muted group-hover:text-foreground transition-transform" />
                   )}
                 </div>
               </button>
@@ -235,8 +247,8 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
                     exit={{ height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-6 pb-6 space-y-4">
-                      <div className="h-px bg-foreground/10 mb-4" />
+                    <div className="px-4 pb-4 md:px-6 md:pb-6 space-y-3 md:space-y-4">
+                      <div className="h-px bg-foreground/10 mb-2 md:mb-4" />
                       {day.sessions.map((session, sIdx) => (
                         <motion.div 
                           key={sIdx}
@@ -249,13 +261,13 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
                           }}
                           transition={{ duration: 0.4, ease: "easeInOut" }}
                           className={cn(
-                            "flex items-start gap-4 p-4 rounded-xl transition-all border border-transparent",
+                            "flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl transition-all border border-transparent",
                             session.completed && "border-accent/20 shadow-inner shadow-accent/5"
                           )}
                         >
                           <button 
                             onClick={() => toggleSession(day.dayIndex, sIdx)}
-                            className="mt-1 relative"
+                            className="mt-0.5 md:mt-1 relative"
                           >
                             <AnimatePresence mode="wait">
                               {session.completed ? (
@@ -266,7 +278,7 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
                                   exit={{ scale: 0.5, opacity: 0 }}
                                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                 >
-                                  <CheckCircle2 className="h-6 w-6 text-accent" />
+                                  <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-accent" />
                                 </motion.div>
                               ) : (
                                 <motion.div
@@ -276,7 +288,7 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
                                   exit={{ scale: 0.5, opacity: 0 }}
                                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                 >
-                                  <Circle className="h-6 w-6 text-muted" />
+                                  <Circle className="h-5 w-5 md:h-6 md:w-6 text-muted" />
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -284,40 +296,40 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
                           <div className="flex-grow space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className={cn(
-                                "font-medium text-lg",
+                                "font-medium text-base md:text-lg",
                                 session.completed && "line-through text-muted"
                               )}>
                                 {session.topic}
                               </span>
                               <div className="flex gap-2">
-                                <span className="text-[10px] bg-foreground/10 text-muted px-2 py-1 rounded-full flex items-center gap-1">
-                                  <Clock className="h-3 w-3" /> {session.duration}m
+                                <span className="text-[8px] md:text-[10px] bg-foreground/10 text-muted px-1.5 md:px-2 py-0.5 md:py-1 rounded-full flex items-center gap-1">
+                                  <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" /> {session.duration}m
                                 </span>
                                 <span className={cn(
-                                  "text-[10px] px-2 py-1 rounded-full border font-bold uppercase tracking-wider",
+                                  "text-[8px] md:text-[10px] px-1.5 md:px-2 py-0.5 md:py-1 rounded-full border font-bold uppercase tracking-wider",
                                   getImportanceColor(session.importance)
                                 )}>
                                   {session.importance}
                                 </span>
                               </div>
                             </div>
-                            <p className="text-xs text-muted italic">"{session.tip}"</p>
+                            <p className="text-[10px] md:text-xs text-muted italic">"{session.tip}"</p>
                           </div>
                         </motion.div>
                       ))}
 
-                      <div className="grid grid-cols-2 gap-4 pt-4">
+                      <div className="grid grid-cols-2 gap-3 md:gap-4 pt-2 md:pt-4">
                         <button 
                           onClick={() => navigate('/chat', { state: { prompt: `Give me some study tips for these topics: ${day.sessions.map(s => s.topic).join(', ')}` } })}
-                          className="flex items-center justify-center gap-2 py-3 rounded-xl border border-foreground/10 hover:bg-foreground/5 transition-all text-sm font-medium"
+                          className="flex items-center justify-center gap-2 py-2.5 md:py-3 rounded-xl border border-foreground/10 hover:bg-foreground/5 transition-all text-xs md:text-sm font-medium"
                         >
-                          <MessageSquare className="h-4 w-4 text-accent" /> AI Tips
+                          <MessageSquare className="h-3.5 w-3.5 md:h-4 md:w-4 text-accent" /> AI Tips
                         </button>
                         <button 
                           onClick={() => navigate('/chat', { state: { prompt: `Quick quiz on: ${day.sessions.map(s => s.topic).join(', ')}` } })}
-                          className="flex items-center justify-center gap-2 py-3 rounded-xl border border-foreground/10 hover:bg-foreground/5 transition-all text-sm font-medium"
+                          className="flex items-center justify-center gap-2 py-2.5 md:py-3 rounded-xl border border-foreground/10 hover:bg-foreground/5 transition-all text-xs md:text-sm font-medium"
                         >
-                          <HelpCircle className="h-4 w-4 text-accent" /> Quick Quiz
+                          <HelpCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-accent" /> Quick Quiz
                         </button>
                       </div>
                     </div>
@@ -328,6 +340,52 @@ export default function TimetablePage({ studyPlan, setStudyPlan, awardXP }: Time
           );
         })}
       </div>
+
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDeleteConfirm(false)}
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative glass p-8 rounded-3xl border-red-500/20 max-w-sm w-full space-y-6 text-center"
+            >
+              <div className="h-16 w-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto">
+                <Trash2 className="h-8 w-8 text-red-500" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold">Delete Study Plan?</h3>
+                <p className="text-sm text-muted">This will permanently remove your study roadmap for {studyPlan.subject}. This action cannot be undone.</p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-3 rounded-xl font-bold border border-foreground/10 hover:bg-foreground/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={async () => {
+                    await deleteStudyPlan();
+                    setShowDeleteConfirm(false);
+                    navigate('/');
+                  }}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
